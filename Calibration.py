@@ -30,7 +30,6 @@ from datetime import datetime as dt
 ## the x and y axis-bounds and whether you want to save the figure. plotVals should be passed as a list of
 ## the energies you want plotted. By default, all energies are plotted. 
 def calibration(instrument, folder, plot=False, xlim = None, ylim = None, plotVals = "all", saveFig = False):
-    print("sup")
     ## rawDataDict will be a layered dictionary, with the format {pixel1:{Ei1:Intensity, Ei2:Intensity,...}, ...}
     ## essentially each pixel will have a map with each energy that represents the raw data measured from the
     ## the calibration experiment.
@@ -55,8 +54,12 @@ def calibration(instrument, folder, plot=False, xlim = None, ylim = None, plotVa
 
     if plot == True:
         ## This section just sets up the colors for the plot. Feel free to ignore
-        default_cycler = cycler(color=['#13306dff', '#347537', '#a65c85',  '#4565b9','#d65a5f', '#f56464',
-                                '#eb8055', '#f9b64aff', '#efe350'])
+        default_cycler = cycler(color=['#347537', '#a65c85',  '#4565b9','#d65a5f', '#f56464',
+                                '#eb8055', '#f9b64aff',])
+        ## I have two options for colors based on how many colors I want, the one above is the color
+        ## scheme used for figure 5, the one below is used for figure 9a.
+        #default_cycler = cycler(color=['#13306dff', '#347537', '#a65c85',  '#4565b9','#d65a5f', '#f56464',
+        #                        '#eb8055', '#f9b64aff', '#efe350'])
         plt.rc('axes', prop_cycle=default_cycler)
         ## this next section takes care of some technicalities.
     for ei in instrument.energyList():
@@ -84,6 +87,7 @@ def calibration(instrument, folder, plot=False, xlim = None, ylim = None, plotVa
                 except:
                     continue
                 fileData = fileOpener.readlines()
+                fileOpener.close()
                 ## This next section reads the data from the ReuterStokes data and appends the location
                 ## the neutron landed on the detctor (ypos) and the measured intensity at the point
                 for line in fileData[instrument.startpoint():]:
@@ -122,7 +126,7 @@ def calibration(instrument, folder, plot=False, xlim = None, ylim = None, plotVa
             gauss = GaussianModel(prefix=f'g{i+1}_')
             pars.update(gauss.make_params())
             pars[f'g{i+1}_center'].set(pixels[peak_index])
-            pars[f'g{i+1}_sigma'].set(0.01)
+            pars[f'g{i+1}_sigma'].set(0.005)
             pars[f'g{i+1}_amplitude'].set(hist[peak_index])
             modelList.append(gauss)
         

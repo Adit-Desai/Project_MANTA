@@ -84,7 +84,7 @@ def cut2D(instrument, dataframe, xVar, yVar, integrationVar, integrationVal, int
     plt.title(f"{instrument.stations} Stations Mosaic {instrument.mosaic} {integrationVar} = {integrationVal} $\pm$ {integrationWidth}")
     ## Saves the file if desired by the user
     if saveFile == True:
-        plt.savefig(f"{instrument.pathBase}/{instrument.stations}_Stations_Mosaic_{instrument.mosaic}_{integrationVar}_{integrationVal}_{Intensity}_{dt.now().strftime('%Y_%m_%d_%H_%M_%S')}.pdf", format = pdf)
+        plt.savefig(f"{instrument.pathBase}/{instrument.stations}_Stations_Mosaic_{instrument.mosaic}_{integrationVar}_{integrationVal}_{dt.now().strftime('%Y_%m_%d_%H_%M_%S')}.pdf", format = "pdf")
     plt.show()
 
 
@@ -145,7 +145,7 @@ def cut1D(instrument, dataframe, xVar, binSize, integrationVar1, integrationVal1
     ## where you are fitting. Currently I have it set such that the distance scales automatically
     ## with the number of bins, but the exact scale factor is tricky. Optimization may be needed
     ## here.
-    i_pk, _ = scipy.signal.find_peaks(histData, distance = len(binCenters)//6, prominence = threshold)
+    i_pk, _ = scipy.signal.find_peaks(histData, distance = len(binCenters)//3, prominence = threshold)
     
     ## Now we prepare the gaussian fitting package using LmFit.
     gaussModel = GaussianModel()
@@ -192,7 +192,7 @@ def cut1D(instrument, dataframe, xVar, binSize, integrationVar1, integrationVal1
             plt.ylim(ylim[0], ylim[1])
         ## Figures saved as pdfs by default if saveFig set to true.
         if saveFile == True:
-            plt.savefig(f"{instrument.pathBase}/{instrument.stations}_Stations_Mosaic_{instrument.mosaic}_{xVar}_v_{Intensity}_{dt.now().strftime('%Y_%m_%d_%H_%M_%S')}.pdf", format = "pdf")
+            plt.savefig(f"{instrument.pathBase}/{instrument.stations}_Stations_Mosaic_{instrument.mosaic}_{xVar}_v_Intensity_{dt.now().strftime('%Y_%m_%d_%H_%M_%S')}.pdf", format = "pdf")
         plt.show()
     return out.best_values
 
@@ -255,7 +255,7 @@ def resolution(instrument, dataframe, xVar, xStepSize, resVar,
             ## any point in which multiple peaks are found from being plotted.
             ## this is when the binRange and threshold parameters are extremely useful
             ## I recommend plotting to see what causes this.
-            secondPeak = bestFit["g2_sigma"]
+            testCenter = bestFit['g2_center']
             print("Warning! Multiple Gaussian peaks were found at the same value of "\
                 f"{xVar} = {num}. Please change your xRange or the threshold"\
                     " variable to make sure there is only one peak used for "\
@@ -329,12 +329,24 @@ def resolutionComp(instrumentList, resxy, xVar, resVar, xlim = None, ylim = None
                 ## x value passed. Then the x, y value at that point 
                 ## are removed.
                 index = np.argmin(np.abs(np.array(resx) - point))
-                resx.remove(resx[index])
-                resy.remove(resy[index])
+                resx = resx[:index] + resx[index+1:]
+                resy = resy[:index] + resy[index+1:]
+                #resx.remove(resx[index])
+                #resy.remove(resy[index])
             ## Then the rest are plotted.
         plt.scatter(resx, resy, marker = "x")
         ## The instrument is passed to allow for the labeling in the legend.
-        plt.plot(resx, resy, label = f'{instrumentList[idx].stations} Stations Mosaic {instrumentList[idx].mosaic}')
+        if instrumentList[idx].type == "toy model":
+            if instrumentList[idx].mosaic == 30:
+                plt.plot(resx, resy, label = f"Toy Model {instrumentList[idx].stations} Stations $0.5^\circ$ Mosaic")
+            elif instrumentList[idx].mosaic == 60:
+                plt.plot(resx, resy, label = f"Toy Model {instrumentList[idx].stations} Stations $1^\circ$ Mosaic")
+            elif instrumentList[idx].mosaic == 120:
+                plt.plot(resx, resy, label = f"Toy Model {instrumentList[idx].stations} Stations $2^\circ$ Mosaic")
+        elif instrumentList[idx].type == "full":
+            if instrumentList[idx].mosaic == 60:
+                plt.plot(resx, resy, label = f"MANTA $1^\circ$ Mosaic")
+
     ## again some conveniences included so that the x,y axis labels can have LaTex formatting.
     if xVar == "Qx":
         plt.xlabel(f"$Q_x~\AA^{-1}$")
@@ -358,7 +370,150 @@ def resolutionComp(instrumentList, resxy, xVar, resVar, xlim = None, ylim = None
         plt.xlim(xlim[0], xlim[1])
     if ylim != None:
         plt.ylim(ylim[0], ylim[1])
-    if saveFig == True:
-        plt.savefig(f"{instrument.pathBase}/{xVar}_v_{resVar}_Resolution_{dt.now().strftime('%Y_%m_%d_%H_%M_%S')}.pdf", format = "pdf")
     plt.legend()
+    if saveFig == True:
+        plt.savefig(f"{instrumentList[0].pathBase}/{xVar}_v_{resVar}_Resolution_{dt.now().strftime('%Y_%m_%d_%H_%M_%S')}.pdf", format = "pdf")
+    
     plt.show()
+
+
+##The function cut2DError was used to produce the plots in Figure 10.
+## It's not practical for daily use but is useful for fitting an "envolope"
+## to a dispersion width to study the resolution
+## Essentially it combines the )resolution()function
+## and the cut2d() function. I probably could have written it so that
+## it called both to produce the plot, but I essentially rewrote the
+## functions of both which is also sufficient.
+
+
+## Again cut2DError()  requires the instrument, and the dataframe
+## xVar, xStepSize, resVar, and binSize are the same as in cut1D()
+## Unlike in resolution() a variable xWidth is specified, which controls
+## the region over the x-axis that is integrated. Specifically the region
+## xVar = val +- xWidth is included in the resolution calculation.
+## This is defined as, and passed as integrationWidth2 in cut1D()
+## In resolution(), intgerationWidth2 = xStepSize/2 always.
+## Whichever variable is not being swept over is passed as integrationVar,
+## and is held constant at integrationVal with integration volume
+## integrationWidth. The threshold and binRange are optional and passed directly to the cut1D()
+## function. If you would like to see each individual cut produced by cut1D(),
+## then set showCuts =True. If you'd like to save all the cut1d() plots, then set saveCuts=True,
+## which is passed directly to cut1D(). saveFile is the parameter
+## that controls whether the resolution plot (xVar vs resVar) itself is saved.
+## ylim controls the y-axis scale, but xlim will also control the number of points
+## cut1D is calculated at. Essentially the points sweeped are in range(xlim[0], xlim[1], xStepSize)
+## The actual plotted x-axis range is slightly larger than the specified range.
+def cut2DError(instrument, dataframe, xVar, xStepSize, xWidth, binSize, yVar, integrationVar, integrationVal, integrationWidth, 
+          xlim = None, ylim = None, colorBarLim = None, saveFile= False, threshold = None, binRange = None,
+                showCuts = False, saveCuts=False):
+    ## First we access the relevant data within the integration Volume
+
+    ## Include the try except clause in case there was a mistake in 
+    ## xVar or yVar
+    try:
+        data = dataframe[dataframe[integrationVar] > integrationVal-integrationWidth]
+    except:
+        print(f"{integrationVar} was not recognized as a variable within the dataframe!")
+        return None
+    data = data[data[integrationVar] < integrationVal + integrationWidth]
+    ## Next we sort the values such that most intense is plotted last
+    ## this is essential for the scatterplot method used
+    data = data.sort_values(by="Intensity")
+    
+
+    xVarList = []
+    yVarCens = []
+    resList = []
+
+    ## This controls the range which the resolution is calculated
+    ## If not specified, it'll just go to the min and max values within the dataframe
+    if xlim == None:
+        xMin, xMax = dataframe[xVar].min(), dataframe[xVar].max()
+    else:
+        xMin, xMax = xlim[0], xlim[1] 
+    for num in np.arange(xMin, xMax, xStepSize):
+        try:
+            ## Now the outputted fit from cut1D, which will output a 
+            ## dictionary with the best fit parameters
+            ## is below
+            bestFit = cut1D(instrument=instrument, dataframe=dataframe, 
+                            xVar = yVar, binSize = binSize,
+                            integrationVar1=integrationVar, integrationVal1 = integrationVal, 
+                            integrationWidth1 = integrationWidth, integrationVar2 = xVar,
+                            integrationVal2= num, integrationWidth2 = xWidth, 
+                            threshold=threshold, binRange = binRange,
+                            showPlot=showCuts, saveFile=saveCuts)
+        except:
+        ## Some values may not work, so the points it fails at are printed. However, in some cases
+        ## this is quite normal so the loop will continue instead of breaking.
+            print(f"Resolution calculation of {yVar} failed at  {xVar} = {num}, {integrationVar} = {integrationVal}, ")
+            plt.show()
+            continue
+        if bestFit== None:
+            continue    
+        try:
+            ## As the fit will automatically try fitting multiple Gaussians
+            ## the secondPeak term will warn you of this. It will prevent
+            ## any point in which multiple peaks are found from being plotted.
+            ## this is when the binRange and threshold parameters are extremely useful
+            ## I recommend plotting to see what causes this.
+            testCenter = bestFit['g2_center']
+            print("Warning! Multiple Gaussian peaks were found at the same value of "\
+                f"{xVar} = {num}. Please change your xRange or the threshold"\
+                    " variable to make sure there is only one peak used for "\
+                        "calculating the resolution!")
+            print(bestFit)
+            continue
+        except:
+            pass
+        xVarList.append(num)
+        yVarCens.append(bestFit['g1_center'])
+        resList.append(bestFit['g1_sigma']*2.355/2)
+    
+    ##Now the errors, centers, and resolutions are plotted with plt.errorBar
+    
+    plt.errorbar(xVarList, yVarCens, resList, capsize=5, elinewidth=0.6, ecolor = "cyan", ls = "none")
+    ##Now we plot using plt.scatter, with vmin and vmax controlling the colorbar intensityh
+    try:
+        if colorBarLim != None:
+            ##c  controls the color such that it corresponds to the intensity of the event.
+            plt.scatter(data[xVar], data[yVar], c=data["Intensity"], s=8, vmin=colorBarLim[0], 
+                        vmax = colorBarLim[1])
+        else:
+            plt.scatter(data[xVar], data[yVar], c=data["Intensity"], s=8)
+    except:
+        print(f"{xVar} and or {yVar} were not recognized as variables within the dataframe!")
+    plt.colorbar(label = "Intensity (a.u.)")
+    ## The rest just controls the axes labels and makes it so they use LaTeX font
+    ## if applicable
+    if xlim !=None:
+        plt.xlim(xlim[0], xlim[1])
+    if ylim != None:
+        plt.ylim(ylim[0], ylim[1])
+    if xVar == "Qy":
+        plt.xlabel("$Q_y~(\AA^{-1})$")
+    elif xVar == "Qx":
+        plt.xlabel("$Q_x~(\AA^{-1})$")
+    elif xVar == "E":
+        plt.xlabel("$E$ (meV)")
+    else:
+        plt.xlabel(f"{xVar}")
+    ##
+    if yVar == "Qy":
+        plt.ylabel("$Q_y~(\AA^{-1})$")
+    elif yVar == "Qx":
+        plt.ylabel("$Q_x~(\AA^{-1})$")
+    elif yVar == "E":
+        plt.ylabel("$E$ (meV)")
+    else:
+        plt.ylabel(f"{yVar}")
+    ## This just sets the title to the following default
+    ## Can be customized according to a users discretion
+    plt.title(f"{instrument.stations} Stations Mosaic {instrument.mosaic} {integrationVar} = {integrationVal} $\pm$ {integrationWidth}")
+    ## Saves the file if desired by the user
+    if saveFile == True:
+        plt.savefig(f"{instrument.pathBase}/{instrument.stations}_Stations_Mosaic_{instrument.mosaic}_{integrationVar}_{integrationVal}_{dt.now().strftime('%Y_%m_%d_%H_%M_%S')}.pdf", format = "pdf")
+    plt.show()
+    print(xVarList)
+    print(resList)
+

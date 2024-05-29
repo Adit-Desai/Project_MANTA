@@ -85,7 +85,11 @@ def dataLoader(instrument, calibration, folder):
         Ei = "undefined"
         sampleAng = "undefined"
         ##Opening and reading the data
-        fileOpener = open("psd_tube1_1a.dat", "r")
+        try:
+            fileOpener = open("psd_tube1_1a.dat", "r")
+        except:
+            print(f"Could not find psd_tube1_1a.dat in {file}")
+            break
         fileData = fileOpener.readlines()
         ##This basically has it so it extracts the experimental parameters based on the structure of
         ## the psd_tube.dat files
@@ -201,7 +205,7 @@ def dataLoader(instrument, calibration, folder):
                     ## perform the future calculations of Q using pandas, thus we transpose the matrix
                     ## to form the following row format: [Ei, Ef, twoth, sampleAng, Intensity]
                     events.append(fileEvents.transpose())
-                      
+        fileOpener.close()                  
     # Now that we have all the data, let's prepare it for the pandas dataframe                
     events = np.array(events)
     ## This step basically flattens the np array so that instead of having several matrices
