@@ -1,0 +1,4932 @@
+/*******************************************************************************
+*
+* McStas, neutron ray-tracing package
+*         Copyright (C) 1997-2008, All rights reserved
+*         Risoe National Laboratory, Roskilde, Denmark
+*         Institut Laue Langevin, Grenoble, France
+*
+* Instrument: MANTA Camea
+*
+* %Identification
+* Written by: G. Sala
+* Date: 19th June 2020.
+* Release McStas 2.5
+* %INSTRUMENT_SITE: Mantid
+*
+* %Description
+* Checking the Camea Backend for MANTA
+*
+* Modified to show a proof of concept method for storing a 'Mantid friendly' type of NeXus file.
+*
+*
+* %Parameters
+* Ei: 			[meV]          	Mean Incident Energy
+*TwoTh:		[deg]		Rotation Angle of the Detector Rack
+*AW1:		[]
+*AW2:		[]
+*AW3:		[]	
+*AW4:		[]
+*AW5:		[]
+*AW6:		[]
+*AW7:		[]
+*AW8:		[]
+*ana_l_add:	[]
+*DET_cen:	[m]			Detector Bank Center
+*DET_rad:		[m]			Detector Tube Radius
+*DET_len:		[m]			Detector Length
+*
+* %Link
+*
+* %End
+*******************************************************************************/
+
+DEFINE INSTRUMENT MANTA_Camea(Ei=4, //E1=3,E2=5.5,
+				TwoTh=0.0, psi = 0,
+				AW1=0.012, AW2=0.012, AW3=0.0125, AW4=0.013,
+				AW5=0.0135, AW6=0.014, AW7= 0.015, AW8=0.016, ana_l_add=0,
+				DET_cen=1.2, DET_rad=0.0063, DET_len=0.9, mosaic_v = 60, mosaic_h = 60)
+
+DECLARE %{
+//Stuff from PbSeTAS
+double Q;
+//double QAngle;
+double theta;
+double energy;
+//double realAngle;
+double theta2;
+double energy2;
+double wavelength;
+double wavelength2;
+double Ei;
+double Ef;
+double dspacing;
+double rv;
+double rh;
+double rv1;
+double rh1;
+double detecTheta;
+double step;
+double crystalTheta;
+double ki;
+double kf;
+double HMon_radius;
+double V_radius;
+double VMon_radius;
+double thetarad;
+
+double a;
+double b;
+double c;
+double d;
+double sourcex;
+double sourcey;
+double monox;
+double monoy;
+double samplex;
+double sampley;
+double source_to_mono;
+double mono_to_sample;
+
+
+
+
+
+
+//Stuff from CAMEA
+/* Order of scattering from the monochromator */
+int scat1 = 0;
+int scat2 = 0;
+int scat3 = 0;
+int scat4 = 0;
+int scat5 = 0;
+int scat6 = 0;
+int scat7 = 0;
+
+/* Analyser material parameters*/
+double ana_mosaic_h;
+double ana_mosaic_v;
+double ana_q = 1.87325;
+double ana_r0 = 0.8; 
+double DA;    /* d-spacing analyser*/
+/*Analyser geometrical parameters */
+double ana_l[9];
+
+// Analyzer positions
+double z_an1[8];
+double y_an1[8];
+double thet_an1[8];
+int Ana1a=0;
+int Ana1b=0;
+int Ana1c=0;
+int Ana1d=0;
+int Ana1e=0;
+int Ana1f=0;
+int Ana1g=0;
+
+double z_an2[8];
+double y_an2[8];
+double thet_an2[8];
+int Ana2a=0;
+int Ana2b=0;
+int Ana2c=0;
+int Ana2d=0;
+int Ana2e=0;
+int Ana2f=0;
+int Ana2g=0;
+
+double z_an3[8];
+double y_an3[8];
+double thet_an3[8];
+int Ana3a=0;
+int Ana3b=0;
+int Ana3c=0;
+int Ana3d=0;
+int Ana3e=0;
+int Ana3f=0;
+int Ana3g=0;
+
+double z_an4[8];
+double y_an4[8];
+double thet_an4[8];
+int Ana4a=0;
+int Ana4b=0;
+int Ana4c=0;
+int Ana4d=0;
+int Ana4e=0;
+int Ana4f=0;
+int Ana4g=0;
+
+double z_an5[8];
+double y_an5[8];
+double thet_an5[8];
+int Ana5a=0;
+int Ana5b=0;
+int Ana5c=0;
+int Ana5d=0;
+int Ana5e=0;
+int Ana5f=0;
+int Ana5g=0;
+
+double z_an6[8];
+double y_an6[8];
+double thet_an6[8];
+int Ana6a=0;
+int Ana6b=0;
+int Ana6c=0;
+int Ana6d=0;
+int Ana6e=0;
+int Ana6f=0;
+int Ana6g=0;
+
+double z_an7[8];
+double y_an7[8];
+double thet_an7[8];
+int Ana7a=0;
+int Ana7b=0;
+int Ana7c=0;
+int Ana7d=0;
+int Ana7e=0;
+int Ana7f=0;
+int Ana7g=0;
+
+double z_an8[8];
+double y_an8[8];
+double thet_an8[8];
+int Ana8a=0;
+int Ana8b=0;
+int Ana8c=0;
+int Ana8d=0;
+int Ana8e=0;
+int Ana8f=0;
+int Ana8g=0;
+double z_an9[8];
+double y_an9[8];
+double thet_an9[8];
+int Ana9a=0;
+int Ana9b=0;
+int Ana9c=0;
+int Ana9d=0;
+int Ana9e=0;
+int Ana9f=0;
+int Ana9g=0;
+double z_an10[8];
+double y_an10[8];
+double thet_an10[8];
+int Ana10a=0;
+int Ana10b=0;
+int Ana10c=0;
+int Ana10d=0;
+int Ana10e=0;
+int Ana10f=0;
+int Ana10g=0;
+
+/* Detector parameters */
+double det_width = 0.275;
+double det_height =0.5;
+double PSF = 0.0074/2.35;// FWHM=0.0074m, measured by C. Bahl NIMB 246, 452.
+
+/* Detector parameters */
+double ang_1[8];
+double ang_2[8];
+double detx_1[8];
+double detz_1[8];
+double detx_2[8];
+double detz_2[8];
+double dety_1;
+double dety_2;
+double det_cen;
+int i;
+
+
+%}
+
+INITIALIZE %{
+//Stuff from PbSe
+
+dspacing = 3.355;
+wavelength= sqrt(81.8047/Ei);
+theta = (asin(wavelength/(2*dspacing)))*(180/PI);
+//theta = TwoTh/2
+wavelength2 = sqrt(81.8047/Ef);
+theta2 = (asin(wavelength2/(2*dspacing)))*(180/PI);
+//rv = 2*(.12)*sin(DEG2RAD*theta2);
+//rh = 2*(.12)/sin(DEG2RAD*theta2);
+//rv1 = 2*(.39)*sin(DEG2RAD*theta);
+//rh1 = 2*(.39)/sin(DEG2RAD*theta);
+thetarad = theta * DEG2RAD;
+//focusing formulas are below, this was directly taken from a MANTA instrument file. The focusing formulas worked well there.
+//My distance from the source to the monochromator is 2 meters, similarly, the monochromator to sample distance is also
+//two meters.
+source_to_mono = 1.6;
+mono_to_sample = 1.6;
+
+sourcex = -1*source_to_mono;
+sourcey = 0;
+monox = 0;
+monoy = 0;
+samplex = mono_to_sample*cos(2*thetarad);
+sampley = mono_to_sample*sin(2*thetarad);
+a = sourcex*(monoy -sampley)- sourcey*(monox-samplex) + monox*sampley - samplex*monoy;
+b = (sourcex*sourcex + sourcey*sourcey) * (sampley-monoy) + (monox*monox + monoy*monoy) *(sourcey-sampley) + (samplex*samplex + sampley*sampley)*(monoy-sourcey);
+c = (sourcex*sourcex + sourcey*sourcey) * (monox - samplex) + (monox*monox + monoy*monoy) * (samplex - sourcex) + (samplex*samplex + sampley*sampley)*(sourcex-monox);
+d = (sourcex*sourcex  +sourcey*sourcey) * (samplex*monoy - monox*sampley) + (monox*monox + monoy*monoy) *(sourcex*sampley - samplex*sourcey) + (samplex*samplex + sampley*sampley) *(monox*sourcey - sourcex*monoy);
+
+//HMon_radius = sqrt((b*b+c*c-4*a*d)/(4*(a*a)));
+
+HMon_radius = mono_to_sample/sin(thetarad);
+// 3 m is the effective source to monocoromator distance for equation
+// 3.12 from Shirane, Shapiro and Tranquada
+VMon_radius = 2*mono_to_sample*source_to_mono*sin(thetarad)/(mono_to_sample+source_to_mono);
+
+ki = (2*PI)/wavelength;
+kf = (2*PI)/wavelength2;
+step = (ki*ki + kf*kf - Q)/(2*ki*kf);
+detecTheta = asin(step) * (180/PI);
+crystalTheta = detecTheta/2;
+
+rv = VMon_radius;
+rh  = HMon_radius;
+
+// Analyzer positions
+z_an1[1]=0.9104;
+z_an1[2]=0.9203;
+z_an1[3]=0.9300;
+z_an1[4]=0.9388;
+z_an1[5]=0.9475;
+y_an1[1]=-0.0286;
+y_an1[2]=-0.0145;
+y_an1[3]=0;
+y_an1[4]=0.0147;
+y_an1[5]=0.0298;
+thet_an1[1]=47.12;
+thet_an1[2]=48.02;
+thet_an1[3]=48.91869985400961;
+thet_an1[4]=49.82;
+thet_an1[5]=50.72;
+ana_l[1]=0.072;
+Ana1a=0;
+Ana1b=0;
+Ana1c=0;
+Ana1d=0;
+Ana1e=0;
+Ana1f=0;
+Ana1g=0;
+
+z_an2[1]=1.0209;
+z_an2[2]=1.0327;
+z_an2[3]=1.04392;
+z_an2[4]=1.0547;
+z_an2[5]=1.0648;
+y_an2[1]=-0.0321;
+y_an2[2]=-0.0162;
+y_an2[3]=0;
+y_an2[4]=0.0166;
+y_an2[5]=0.0335;
+thet_an2[1]=43.49;
+thet_an2[2]=44.39;
+thet_an2[3]=45.28934229535835;
+thet_an2[4]=46.19;
+thet_an2[5]=47.09;
+ana_l[2]=0.07866999999999999;
+Ana2a=0;
+Ana2b=0;
+Ana2c=0;
+Ana2d=0;
+Ana2e=0;
+Ana2f=0;
+Ana2g=0;
+
+z_an3[1]=1.1312;
+z_an3[2]=1.1449;
+z_an3[3]=1.15804;
+z_an3[4]=1.1706;
+z_an3[5]=1.1826;
+y_an3[1]=-0.0355;
+y_an3[2]=-0.0180;
+y_an3[3]=0;
+y_an3[4]=0.0184;
+y_an3[5]=0.0372;
+thet_an3[1]=40.59;
+thet_an3[2]=41.49;
+thet_an3[3]=42.39201385996021;
+thet_an3[4]=43.29;
+thet_an3[5]=44.19;
+ana_l[3]=0.08534;
+Ana3a=0;
+Ana3b=0;
+Ana3c=0;
+Ana3d=0;
+Ana3e=0;
+Ana3f=0;
+Ana3g=0;
+
+z_an4[1]=1.2413;
+z_an4[2]=1.2570;
+z_an4[3]=1.27216;
+z_an4[4]=1.2867;
+z_an4[5]=1.3006;
+y_an4[1]=-0.0390;
+y_an4[2]=-0.0197;
+y_an4[3]=0;
+y_an4[4]=0.0202;
+y_an4[5]=0.0409;
+thet_an4[1]=38.20;
+thet_an4[2]=39.10;
+thet_an4[3]=40.0027184796549;
+thet_an4[4]=40.90;
+thet_an4[5]=41.80;
+ana_l[4]=0.09201;
+Ana4a=0;
+Ana4b=0;
+Ana4c=0;
+Ana4d=0;
+Ana4e=0;
+Ana4f=0;
+Ana4g=0;
+
+z_an5[1]=1.3511;
+z_an5[2]=1.3690;
+z_an5[3]=1.3862799999999997;
+z_an5[4]=1.4029;
+z_an5[5]=1.4188;
+y_an5[1]=-0.0425;
+y_an5[2]=-0.0215;
+y_an5[3]=0;
+y_an5[4]=0.0220;
+y_an5[5]=0.0449;
+thet_an5[1]=36.19;
+thet_an5[2]=37.09;
+thet_an5[3]=37.98514005078124;
+thet_an5[4]=38.89;
+thet_an5[5]=39.79;
+ana_l[5]=0.09867999999999999;
+Ana5a=0;
+Ana5b=0;
+Ana5c=0;
+Ana5d=0;
+Ana5e=0;
+Ana5f=0;
+Ana5g=0;
+
+ana_l[1]=ana_l[1]+ana_l_add;
+ana_l[2]=ana_l[2]+ana_l_add;
+ana_l[3]=ana_l[3]+ana_l_add;
+ana_l[4]=ana_l[4]+ana_l_add;
+ana_l[5]=ana_l[5]+ana_l_add;
+
+// Detector positions
+
+ang_1[0]=-3.33;
+ang_1[1]=-2.22;
+ang_1[2]=-1.11;
+ang_1[3]=0;
+ang_1[4]=1.11;
+ang_1[5]=2.22;
+ang_1[6]=3.33;
+
+ang_2[0]=-2.775;
+ang_2[1]=-1.665;
+ang_2[2]=-0.555;
+ang_2[3]=0.555;
+ang_2[4]=1.665;
+ang_2[5]=2.775;
+
+dety_1=0.7;
+dety_2=0.71;
+det_cen=DET_cen;
+
+
+for (i=0; i<7; i++){
+	detx_1[i] = -sin(ang_1[i]*PI/180)*det_cen;
+	detz_1[i] = cos(ang_1[i]*PI/180)*det_cen;
+}
+
+for (i=0; i<6; i++){
+	detx_2[i] = -sin(ang_2[i]*PI/180)*det_cen;
+	detz_2[i] = cos(ang_2[i]*PI/180)*det_cen;
+}
+
+%}
+
+/*******************************************************/
+/*										    */
+/*  			BEGINNING OF THE TRACE		    */
+/*										    */
+/*******************************************************/
+TRACE
+
+COMPONENT arm0 = Progress_bar()
+  AT (0,0,0) ABSOLUTE
+
+COMPONENT armSource = Arm()
+  AT (0, 0, 0) ABSOLUTE
+
+// Source Position
+/*
+COMPONENT sourceMantid =  Virtual_input(filename="Scattered_neutron_5p0meV_SpinWave.dat")
+AT (0, 0, 0) RELATIVE armSource*/
+
+
+COMPONENT Sample_Arm = Arm()
+     AT (0, 0, 0) RELATIVE armSource 
+ROTATED (0, 0, 0) RELATIVE armSource
+
+COMPONENT source_gen = Source_gen(
+    radius = 0.01,
+    dist=source_to_mono, 
+    focus_xw=.3, 
+    focus_yh=.168, 
+    //yheight=.2, 
+   // xwidth=.25, 
+    E0 = Ei,
+    dE = Ei*0.2
+    //Emin=Ei - 1, 
+    //Emax=Ei + 1
+)
+AT (0, 0, 0) RELATIVE PREVIOUS
+
+COMPONENT arm49 = Arm()
+AT (0, 0, source_to_mono) RELATIVE PREVIOUS
+ROTATED (0, theta, 0) RELATIVE PREVIOUS
+
+
+COMPONENT monochromator_curved2 = Monochromator_curved(
+    zwidth=0.015,
+    yheight=0.015,
+    mosaich=27, 
+    mosaicv=27, 
+ //   NH=22,
+ //   NV=22,
+    r0=1,
+    RV= rv,
+    RH= HMon_radius, 
+    DM=dspacing, 
+    width=0.3, 
+    height=0.168)
+AT (0, 0, 0) RELATIVE PREVIOUS
+
+
+
+/*
+COMPONENT monochromator_flat = Monochromator_flat(
+    mosaich=60, 
+    mosaicv=60, 
+    zwidth = 0.2,
+    yheight=0.2,
+    r0=1, 
+    DM=dspacing)
+AT (0, 0, 0) RELATIVE PREVIOUS
+*/
+
+COMPONENT arm55 = Arm()
+AT (0, 0, 0) RELATIVE PREVIOUS
+ROTATED (0, theta, 0) RELATIVE PREVIOUS
+
+COMPONENT psd_monitor78 = PSD_monitor(
+    filename="maya", 
+    xwidth=.3, 
+    yheight=.3, 
+    restore_neutron=1)
+AT (0, 0, mono_to_sample-0.5) RELATIVE PREVIOUS
+
+COMPONENT e_monitor78 = E_monitor(
+    filename="mayE", 
+    xwidth=.3, 
+    yheight=.3, 
+    Emin=1, 
+    Emax=12, 
+    restore_neutron=1)
+AT (0, 0, 0) RELATIVE PREVIOUS
+
+COMPONENT arm = Arm()
+AT (0, 0, 0.5) RELATIVE PREVIOUS
+ROTATED (0, psi, 0) RELATIVE PREVIOUS
+
+
+COMPONENT phonon_simple = Phonon_simple(
+    radius=0.01, 
+    yheight=0.02, 
+    sigma_abs=.171, 
+    sigma_inc=.32, 
+    a=6.28, 
+    b=9.405, 
+    M=207.2, 
+    c=2.5, 
+    DW=1, 
+    T=10)
+AT (0, 0, 0) RELATIVE PREVIOUS  
+/*
+COMPONENT isotropic_sqw = Isotropic_Sqw(
+    radius = .01,
+    yheight = .02,
+    Sqw_coh = "He4_liq_coh.sqw",
+    T=2)
+AT (0, 0, 0) RELATIVE PREVIOUS
+*/
+
+/*
+//Stuff from CAMEA
+/*
+COMPONENT source_gen = Source_gen(
+    dist=1.41, 
+    focus_xw=0.075*2, 
+    focus_yh=0.05*2, 
+    dist=.1,
+    focus_xw=0.06,
+    focus_yh=.033,
+    Emin=E1, 
+    Emax=E2, 
+    yheight=0.02, 
+    //xwidth=.5)
+    //xwidth=0.15)
+    xwidth=0.02)
+AT (0, 0, 0) RELATIVE armSource
+*/
+
+//My stuff
+/*
+COMPONENT source_gen = Source_gen(
+    dist=.15, 
+    yheight=.02, 
+    xwidth=.02, 
+    Emin=E1, 
+    Emax=E2)
+AT (0, 0, 0) RELATIVE PREVIOUS
+*/
+/*
+COMPONENT isotropic_sqw = Isotropic_Sqw(
+    radius = .03,
+    yheight = .033,
+    Sqw_coh = "He4_liq_coh.sqw",
+    T=2)
+AT (0, 0, 0.1) RELATIVE PREVIOUS
+/*
+COMPONENT Vanadium = V_sample(
+    radius = 0.03,
+    yheight = .033)
+AT (0,0,0.1) RELATIVE PREVIOUS
+*/
+
+
+
+/** Arms for the Analyser Rack **/
+
+COMPONENT a4a = Arm()
+     AT (0, 0, 0) RELATIVE PREVIOUS //Sample_Arm 
+ROTATED (0, TwoTh-psi, 0) RELATIVE PREVIOUS //armSource
+EXTEND %{
+  Ana1a=0; 
+  Ana2a=0; 
+  Ana3a=0; 
+  Ana4a=0; 
+  Ana5a=0; 
+  Ana6a=0; 
+  Ana7a=0; 
+  Ana8a=0; 
+scat1=0;
+%}
+//mine
+
+/**
+COMPONENT slit = Slit(
+    xwidth=.1, 
+    yheight=.1)
+AT (0, 0, .02) RELATIVE a4a
+ROTATED(0,0,0) RELATIVE a4a
+*/
+/*
+COMPONENT collimator_linear = Collimator_linear(
+    xmin=-.065, 
+    xmax=.065, 
+    ymin=-.065, 
+    ymax=.065, 
+    length=.5, 
+    divergence=60)
+AT (0, 0, .08) RELATIVE PREVIOUS
+ROTATED (0, 0,0) RELATIVE PREVIOUS
+*/
+
+COMPONENT slit2 = Slit(
+    xwidth=.1, 
+    yheight=.1)
+AT (0, 0, z_an1[1]-.1) RELATIVE a4a
+ROTATED(0,0,0) RELATIVE a4a
+
+COMPONENT psd_monitor58 = PSD_monitor(
+    filename="maya2", 
+    xwidth=.3, 
+    yheight=.3, 
+    restore_neutron=1)
+AT (0, 0, .05) RELATIVE PREVIOUS
+
+COMPONENT e_monitor58 = E_monitor(
+    filename="mayE2", 
+    xwidth=.3, 
+    yheight=.3, 
+    Emin=1, 
+    Emax=12, 
+    restore_neutron=1)
+AT (0, 0, 0) RELATIVE PREVIOUS
+
+
+//up top
+
+COMPONENT a4b = Arm()
+     AT (0, 0, 0) RELATIVE Sample_Arm 
+ROTATED (0, TwoTh+8.0, 0) RELATIVE armSource
+EXTEND %{
+  Ana1b=0; 
+  Ana2b=0; 
+  Ana3b=0; 
+  Ana4b=0; 
+  Ana5b=0; 
+  Ana6b=0; 
+  Ana7b=0; 
+  Ana8b=0; 
+scat2=0;
+%}
+
+COMPONENT a4c = Arm()
+     AT (0, 0, 0) RELATIVE Sample_Arm 
+ROTATED (0, TwoTh+16.0, 0) RELATIVE armSource
+EXTEND %{
+  Ana1c=0; 
+  Ana2c=0; 
+  Ana3c=0; 
+  Ana4c=0; 
+  Ana5c=0; 
+  Ana6c=0; 
+  Ana7c=0; 
+  Ana8c=0; 
+scat3=0;
+%}
+
+COMPONENT a4d = Arm()
+     AT (0, 0, 0) RELATIVE Sample_Arm 
+ROTATED (0, TwoTh+24.0, 0) RELATIVE armSource
+EXTEND %{
+  Ana1d=0; 
+  Ana2d=0; 
+  Ana3d=0; 
+  Ana4d=0; 
+  Ana5d=0; 
+  Ana6d=0; 
+  Ana7d=0; 
+  Ana8d=0; 
+scat4=0;
+%}
+
+COMPONENT a4e = Arm()
+     AT (0, 0, 0) RELATIVE Sample_Arm 
+ROTATED (0, TwoTh+32.0, 0) RELATIVE armSource
+EXTEND %{
+  Ana1e=0; 
+  Ana2e=0; 
+  Ana3e=0; 
+  Ana4e=0; 
+  Ana5e=0; 
+  Ana6e=0; 
+  Ana7e=0; 
+  Ana8e=0; 
+scat5=0;
+%}
+
+COMPONENT a4f = Arm()
+     AT (0, 0, 0) RELATIVE Sample_Arm 
+ROTATED (0, TwoTh+40.0, 0) RELATIVE armSource
+EXTEND %{
+  Ana1f=0; 
+  Ana2f=0; 
+  Ana3f=0; 
+  Ana4f=0; 
+  Ana5f=0; 
+  Ana6f=0; 
+  Ana7f=0; 
+  Ana8f=0; 
+scat6=0;
+%}
+
+COMPONENT a4g = Arm()
+     AT (0, 0, 0) RELATIVE Sample_Arm 
+ROTATED (0, TwoTh+48.0, 0) RELATIVE armSource
+EXTEND %{
+  Ana1g=0; 
+  Ana2g=0; 
+  Ana3g=0; 
+  Ana4g=0; 
+  Ana5g=0; 
+  Ana6g=0; 
+  Ana7g=0; 
+  Ana8g=0; 
+scat7=0;
+%}
+
+/*************************************/
+/*
+COMPONENT beamstopL = Beamstop(
+    xmin=-1, 
+    xmax=-.005, 
+    ymin=-.5, 
+    ymax=.5)
+AT (0, 0, 0.05) RELATIVE source_gen
+
+COMPONENT beamstopR = Beamstop(
+    xmin=.005, 
+    xmax=1, 
+    ymin=-.5, 
+    ymax=.5)
+AT (0, 0, 0.0501) RELATIVE source_gen
+
+COMPONENT beamstop1 = Beamstop(
+    xmin=-1, 
+    xmax=-.005, 
+    ymin=-.5, 
+    ymax=.5)
+AT (0, 0, .1) RELATIVE source_gen
+
+COMPONENT beamstop2 = Beamstop(
+    xmin=.005, 
+    xmax=1, 
+    ymin=-.5, 
+    ymax=.5)
+AT (0, 0, .101) RELATIVE source_gen
+
+*/
+
+// Be Filter
+//COMPONENT Be_filter = Filter_gen(
+//    filename = "Be.trm", options = "wavevector multiply", xmin = -0.1,
+//    xmax = 0.1, ymin = -0.1, ymax = 0.1, thickness = 0.12)
+// AT (0, 0, 0.2005) RELATIVE a4
+
+/***************** ENTIRE rack of Analyser 1 ******************/
+
+
+COMPONENT an11= Monochromator_flat(
+    zmin=-ana_l[1]/2, zmax=ana_l[1]/2,ymin=-AW1/2, ymax=AW1/2,
+    mosaich=mosaic_h, mosaicv=mosaic_v,
+    r0=ana_r0, Q=ana_q)
+AT (0, y_an1[1], z_an1[1]) RELATIVE a4a
+  ROTATED (90-thet_an1[1], 90.0, 0) RELATIVE a4a
+GROUP Analyzer
+EXTEND %{
+  if(SCATTERED) {Ana1a = 1;
+scat1=1;}
+%}
+
+COMPONENT an12= Monochromator_flat(
+    zmin=-ana_l[1]/2, zmax=ana_l[1]/2,ymin=-AW1/2, ymax=AW1/2,
+    mosaich=mosaic_h, mosaicv=mosaic_v,
+    r0=ana_r0, Q=ana_q)
+AT (0, y_an1[2], z_an1[2]) RELATIVE a4a
+  ROTATED (90-thet_an1[2], 90.0, 0) RELATIVE a4a
+GROUP Analyzer
+EXTEND %{
+  if(SCATTERED) {Ana1a = 2;
+scat1=1;}
+%}
+
+COMPONENT an13= Monochromator_flat(
+    zmin=-ana_l[1]/2, zmax=ana_l[1]/2,ymin=-AW1/2, ymax=AW1/2,
+    mosaich=mosaic_h, mosaicv=mosaic_v,
+    r0=ana_r0, Q=ana_q)
+AT (0, y_an1[3], z_an1[3]) RELATIVE a4a
+  ROTATED (90-thet_an1[3], 90.0, 0) RELATIVE a4a
+GROUP Analyzer
+EXTEND %{
+  if(SCATTERED) {Ana1a = 3;
+scat1=1;}
+%}
+
+COMPONENT an14= Monochromator_flat(
+    zmin=-ana_l[1]/2, zmax=ana_l[1]/2,ymin=-AW1/2, ymax=AW1/2,
+    mosaich=mosaic_h, mosaicv=mosaic_v,
+    r0=ana_r0, Q=ana_q)
+AT (0, y_an1[4], z_an1[4]) RELATIVE a4a
+  ROTATED (90-thet_an1[4], 90.0, 0) RELATIVE a4a
+GROUP Analyzer
+EXTEND %{
+  if(SCATTERED) {Ana1a = 4;
+scat1=1;}
+%}
+
+COMPONENT an15= Monochromator_flat(
+    zmin=-ana_l[1]/2, zmax=ana_l[1]/2,ymin=-AW1/2, ymax=AW1/2,
+    mosaich=mosaic_h, mosaicv=mosaic_v,
+    r0=ana_r0, Q=ana_q)
+AT (0, y_an1[5], z_an1[5]) RELATIVE a4a
+  ROTATED (90-thet_an1[5], 90.0, 0) RELATIVE a4a
+GROUP Analyzer
+EXTEND %{
+  if(SCATTERED) {Ana1a = 5;
+scat1=1;}
+%}
+
+COMPONENT an21= Monochromator_flat(
+    zmin=-ana_l[2]/2, zmax=ana_l[2]/2,ymin=-AW2/2, ymax=AW2/2,
+    mosaich=mosaic_h, mosaicv=mosaic_v,
+    r0=ana_r0, Q=ana_q)
+AT (0, y_an2[1], z_an2[1]) RELATIVE a4a
+  ROTATED (90-thet_an2[1], 90.0, 0) RELATIVE a4a
+GROUP Analyzer
+EXTEND %{
+  if(SCATTERED) {Ana2a = 1;
+scat1=1;}
+%}
+
+COMPONENT an22= Monochromator_flat(
+    zmin=-ana_l[2]/2, zmax=ana_l[2]/2,ymin=-AW2/2, ymax=AW2/2,
+    mosaich=mosaic_h, mosaicv=mosaic_v,
+    r0=ana_r0, Q=ana_q)
+AT (0, y_an2[2], z_an2[2]) RELATIVE a4a
+  ROTATED (90-thet_an2[2], 90.0, 0) RELATIVE a4a
+GROUP Analyzer
+EXTEND %{
+  if(SCATTERED) {Ana2a = 2;
+scat1=1;}
+%}
+
+COMPONENT an23= Monochromator_flat(
+    zmin=-ana_l[2]/2, zmax=ana_l[2]/2,ymin=-AW2/2, ymax=AW2/2,
+    mosaich=mosaic_h, mosaicv=mosaic_v,
+    r0=ana_r0, Q=ana_q)
+AT (0, y_an2[3], z_an2[3]) RELATIVE a4a
+  ROTATED (90-thet_an2[3], 90.0, 0) RELATIVE a4a
+GROUP Analyzer
+EXTEND %{
+  if(SCATTERED) {Ana2a = 3;
+scat1=1;}
+%}
+
+COMPONENT an24= Monochromator_flat(
+    zmin=-ana_l[2]/2, zmax=ana_l[2]/2,ymin=-AW2/2, ymax=AW2/2,
+    mosaich=mosaic_h, mosaicv=mosaic_v,
+    r0=ana_r0, Q=ana_q)
+AT (0, y_an2[4], z_an2[4]) RELATIVE a4a
+  ROTATED (90-thet_an2[4], 90.0, 0) RELATIVE a4a
+GROUP Analyzer
+EXTEND %{
+  if(SCATTERED) {Ana2a = 4;
+scat1=1;}
+%}
+
+COMPONENT an25= Monochromator_flat(
+    zmin=-ana_l[2]/2, zmax=ana_l[2]/2,ymin=-AW2/2, ymax=AW2/2,
+    mosaich=mosaic_h, mosaicv=mosaic_v,
+    r0=ana_r0, Q=ana_q)
+AT (0, y_an2[5], z_an2[5]) RELATIVE a4a
+  ROTATED (90-thet_an2[5], 90.0, 0) RELATIVE a4a
+GROUP Analyzer
+EXTEND %{
+  if(SCATTERED) {Ana2a = 5;
+scat1=1;}
+%}
+
+COMPONENT an31= Monochromator_flat(
+    zmin=-ana_l[3]/2, zmax=ana_l[3]/2,ymin=-AW3/2, ymax=AW3/2,
+    mosaich=mosaic_h, mosaicv=mosaic_v,
+    r0=ana_r0, Q=ana_q)
+AT (0, y_an3[1], z_an3[1]) RELATIVE a4a
+  ROTATED (90-thet_an3[1], 90.0, 0) RELATIVE a4a
+GROUP Analyzer
+EXTEND %{
+  if(SCATTERED) {Ana3a = 1;
+scat1=1;}
+%}
+
+COMPONENT an32= Monochromator_flat(
+    zmin=-ana_l[3]/2, zmax=ana_l[3]/2,ymin=-AW3/2, ymax=AW3/2,
+    mosaich=mosaic_h, mosaicv=mosaic_v,
+    r0=ana_r0, Q=ana_q)
+AT (0, y_an3[2], z_an3[2]) RELATIVE a4a
+  ROTATED (90-thet_an3[2], 90.0, 0) RELATIVE a4a
+GROUP Analyzer
+EXTEND %{
+  if(SCATTERED) {Ana3a = 2;
+scat1=1;}
+%}
+
+COMPONENT an33= Monochromator_flat(
+    zmin=-ana_l[3]/2, zmax=ana_l[3]/2,ymin=-AW3/2, ymax=AW3/2,
+    mosaich=mosaic_h, mosaicv=mosaic_v,
+    r0=ana_r0, Q=ana_q)
+AT (0, y_an3[3], z_an3[3]) RELATIVE a4a
+  ROTATED (90-thet_an3[3], 90.0, 0) RELATIVE a4a
+GROUP Analyzer
+EXTEND %{
+  if(SCATTERED) {Ana3a = 3;
+scat1=1;}
+%}
+
+COMPONENT an34= Monochromator_flat(
+    zmin=-ana_l[3]/2, zmax=ana_l[3]/2,ymin=-AW3/2, ymax=AW3/2,
+    mosaich=mosaic_h, mosaicv=mosaic_v,
+    r0=ana_r0, Q=ana_q)
+AT (0, y_an3[4], z_an3[4]) RELATIVE a4a
+  ROTATED (90-thet_an3[4], 90.0, 0) RELATIVE a4a
+GROUP Analyzer
+EXTEND %{
+  if(SCATTERED) {Ana3a = 4;
+scat1=1;}
+%}
+
+COMPONENT an35= Monochromator_flat(
+    zmin=-ana_l[3]/2, zmax=ana_l[3]/2,ymin=-AW3/2, ymax=AW3/2,
+    mosaich=mosaic_h, mosaicv=mosaic_v,
+    r0=ana_r0, Q=ana_q)
+AT (0, y_an3[5], z_an3[5]) RELATIVE a4a
+  ROTATED (90-thet_an3[5], 90.0, 0) RELATIVE a4a
+GROUP Analyzer
+EXTEND %{
+  if(SCATTERED) {Ana3a = 5;
+scat1=1;}
+%}
+
+COMPONENT an41= Monochromator_flat(
+    zmin=-ana_l[4]/2, zmax=ana_l[4]/2,ymin=-AW4/2, ymax=AW4/2,
+    mosaich=mosaic_h, mosaicv=mosaic_v,
+    r0=ana_r0, Q=ana_q)
+AT (0, y_an4[1], z_an4[1]) RELATIVE a4a
+  ROTATED (90-thet_an4[1], 90.0, 0) RELATIVE a4a
+GROUP Analyzer
+EXTEND %{
+  if(SCATTERED) {Ana4a = 1;
+scat1=1;}
+%}
+
+COMPONENT an42= Monochromator_flat(
+    zmin=-ana_l[4]/2, zmax=ana_l[4]/2,ymin=-AW4/2, ymax=AW4/2,
+    mosaich=mosaic_h, mosaicv=mosaic_v,
+    r0=ana_r0, Q=ana_q)
+AT (0, y_an4[2], z_an4[2]) RELATIVE a4a
+  ROTATED (90-thet_an4[2], 90.0, 0) RELATIVE a4a
+GROUP Analyzer
+EXTEND %{
+  if(SCATTERED) {Ana4a = 2;
+scat1=1;}
+%}
+
+COMPONENT an43= Monochromator_flat(
+    zmin=-ana_l[4]/2, zmax=ana_l[4]/2,ymin=-AW4/2, ymax=AW4/2,
+    mosaich=mosaic_h, mosaicv=mosaic_v,
+    r0=ana_r0, Q=ana_q)
+AT (0, y_an4[3], z_an4[3]) RELATIVE a4a
+  ROTATED (90-thet_an4[3], 90.0, 0) RELATIVE a4a
+GROUP Analyzer
+EXTEND %{
+  if(SCATTERED) {Ana4a = 3;
+scat1=1;}
+%}
+
+COMPONENT an44= Monochromator_flat(
+    zmin=-ana_l[4]/2, zmax=ana_l[4]/2,ymin=-AW4/2, ymax=AW4/2,
+    mosaich=mosaic_h, mosaicv=mosaic_v,
+    r0=ana_r0, Q=ana_q)
+AT (0, y_an4[4], z_an4[4]) RELATIVE a4a
+  ROTATED (90-thet_an4[4], 90.0, 0) RELATIVE a4a
+GROUP Analyzer
+EXTEND %{
+  if(SCATTERED) {Ana4a = 4;
+scat1=1;}
+%}
+
+COMPONENT an45= Monochromator_flat(
+    zmin=-ana_l[4]/2, zmax=ana_l[4]/2,ymin=-AW4/2, ymax=AW4/2,
+    mosaich=mosaic_h, mosaicv=mosaic_v,
+    r0=ana_r0, Q=ana_q)
+AT (0, y_an4[5], z_an4[5]) RELATIVE a4a
+  ROTATED (90-thet_an4[5], 90.0, 0) RELATIVE a4a
+GROUP Analyzer
+EXTEND %{
+  if(SCATTERED) {Ana4a = 5;
+scat1=1;}
+%}
+
+COMPONENT an51= Monochromator_flat(
+    zmin=-ana_l[5]/2, zmax=ana_l[5]/2,ymin=-AW5/2, ymax=AW5/2,
+    mosaich=mosaic_h, mosaicv=mosaic_v,
+    r0=ana_r0, Q=ana_q)
+AT (0, y_an5[1], z_an5[1]) RELATIVE a4a
+  ROTATED (90-thet_an5[1], 90.0, 0) RELATIVE a4a
+GROUP Analyzer
+EXTEND %{
+  if(SCATTERED) {Ana5a = 1;
+scat1=1;}
+%}
+
+COMPONENT an52= Monochromator_flat(
+    zmin=-ana_l[5]/2, zmax=ana_l[5]/2,ymin=-AW5/2, ymax=AW5/2,
+    mosaich=mosaic_h, mosaicv=mosaic_v,
+    r0=ana_r0, Q=ana_q)
+AT (0, y_an5[2], z_an5[2]) RELATIVE a4a
+  ROTATED (90-thet_an5[2], 90.0, 0) RELATIVE a4a
+GROUP Analyzer
+EXTEND %{
+  if(SCATTERED) {Ana5a = 2;
+scat1=1;}
+%}
+
+COMPONENT an53= Monochromator_flat(
+    zmin=-ana_l[5]/2, zmax=ana_l[5]/2,ymin=-AW5/2, ymax=AW5/2,
+    mosaich=mosaic_h, mosaicv=mosaic_v,
+    r0=ana_r0, Q=ana_q)
+AT (0, y_an5[3], z_an5[3]) RELATIVE a4a
+  ROTATED (90-thet_an5[3], 90.0, 0) RELATIVE a4a
+GROUP Analyzer
+EXTEND %{
+  if(SCATTERED) {Ana5a = 3;
+scat1=1;}
+%}
+
+COMPONENT an54= Monochromator_flat(
+    zmin=-ana_l[5]/2, zmax=ana_l[5]/2,ymin=-AW5/2, ymax=AW5/2,
+    mosaich=mosaic_h, mosaicv=mosaic_v,
+    r0=ana_r0, Q=ana_q)
+AT (0, y_an5[4], z_an5[4]) RELATIVE a4a
+  ROTATED (90-thet_an5[4], 90.0, 0) RELATIVE a4a
+GROUP Analyzer
+EXTEND %{
+  if(SCATTERED) {Ana5a = 4;
+scat1=1;}
+%}
+
+COMPONENT an55= Monochromator_flat(
+    zmin=-ana_l[5]/2, zmax=ana_l[5]/2,ymin=-AW5/2, ymax=AW5/2,
+    mosaich=mosaic_h, mosaicv=mosaic_v,
+    r0=ana_r0, Q=ana_q)
+AT (0, y_an5[5], z_an5[5]) RELATIVE a4a
+  ROTATED (90-thet_an5[5], 90.0, 0) RELATIVE a4a
+GROUP Analyzer
+EXTEND %{
+  if(SCATTERED) {Ana5a = 5;
+scat1=1;}
+%}
+
+
+// Entire rack of Detectors
+
+/*COMPONENT psd_monitor = PSD_monitor(
+    filename="test", 
+    xwidth=.28, 
+    yheight=0.9, 
+    restore_neutron=1)
+AT (detx_2[3], dety_2-.01, detz_2[2]) RELATIVE a4a
+ROTATED (90, 180, 0) RELATIVE a4a*/
+
+COMPONENT psd_tube1_1a = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_1_1.psd",
+    FN_Conv = "Gas_tables/He3inHe.table", FN_Stop = "Gas_tables/He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat1==1) AT (detx_1[0], dety_1, detz_1[0]) RELATIVE a4a
+  ROTATED (90, 0, ang_1[0]) RELATIVE a4a
+
+COMPONENT psd_tube1_2a = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_2_1.psd",
+    FN_Conv = "Gas_tables/He3inHe.table", FN_Stop = "Gas_tables/He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat1==1) AT (detx_1[1], dety_1, detz_1[1]) RELATIVE a4a
+  ROTATED (90, 0, ang_1[1]) RELATIVE a4a
+
+COMPONENT psd_tube1_3a = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_3_1.psd",
+    FN_Conv = "Gas_tables/He3inHe.table", FN_Stop = "Gas_tables/He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat1==1) AT (detx_1[2], dety_1, detz_1[2]) RELATIVE a4a
+  ROTATED (90, 0, ang_1[2]) RELATIVE a4a
+
+COMPONENT psd_tube1_4a = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_4_1.psd",
+    FN_Conv = "Gas_tables/He3inHe.table", FN_Stop = "Gas_tables/He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat1==1) AT (detx_1[3], dety_1, detz_1[3]) RELATIVE a4a
+  ROTATED (90, 0, ang_1[3]) RELATIVE a4a
+
+COMPONENT psd_tube1_5a = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_5_1.psd",
+    FN_Conv = "Gas_tables/He3inHe.table", FN_Stop = "Gas_tables/He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat1==1) AT (detx_1[4], dety_1, detz_1[4]) RELATIVE a4a
+  ROTATED (90, 0, ang_1[4]) RELATIVE a4a 
+
+COMPONENT psd_tube1_6a = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_6_1.psd",
+    FN_Conv = "Gas_tables/He3inHe.table", FN_Stop = "Gas_tables/He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat1==1) AT (detx_1[5], dety_1, detz_1[5]) RELATIVE a4a
+  ROTATED (90, 0, ang_1[5]) RELATIVE a4a
+
+COMPONENT psd_tube1_7a = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_7_1.psd",
+    FN_Conv = "Gas_tables/He3inHe.table", FN_Stop = "Gas_tables/He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat1==1) AT (detx_1[6], dety_1, detz_1[6]) RELATIVE a4a
+  ROTATED (90, 0, ang_1[6]) RELATIVE a4a
+
+COMPONENT psd_tube2_1a = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_1_1.psd",
+    FN_Conv = "Gas_tables/He3inHe.table", FN_Stop = "Gas_tables/He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat1==1) AT (detx_2[0], dety_2, detz_2[0]) RELATIVE a4a
+  ROTATED (90, 0, ang_2[0]) RELATIVE a4a
+
+COMPONENT psd_tube2_2a = PSD_Detector(
+    nx = 5, ny = 128, filename = "ReuterStokes2_2_1.psd",
+    FN_Conv = "Gas_tables/He3inHe.table", FN_Stop = "Gas_tables/He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat1==1) AT (detx_2[1], dety_2, detz_2[1]) RELATIVE a4a
+  ROTATED (90, 0, ang_2[1]) RELATIVE a4a
+
+COMPONENT psd_tube2_3a = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_3_1.psd",
+    FN_Conv = "Gas_tables/He3inHe.table", FN_Stop = "Gas_tables/He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat1==1) AT (detx_2[2], dety_2, detz_2[2]) RELATIVE a4a
+  ROTATED (90, 0, ang_2[2]) RELATIVE a4a
+
+COMPONENT psd_tube2_4a = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_4_1.psd",
+    FN_Conv = "Gas_tables/He3inHe.table", FN_Stop = "Gas_tables/He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat1==1) AT (detx_2[3], dety_2, detz_2[3]) RELATIVE a4a
+  ROTATED (90, 0, ang_2[3]) RELATIVE a4a
+
+COMPONENT psd_tube2_5a = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_5_1.psd",
+    FN_Conv = "Gas_tables/He3inHe.table", FN_Stop = "Gas_tables/He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat1==1) AT (detx_2[4], dety_2, detz_2[4]) RELATIVE a4a
+  ROTATED (90, 0, ang_2[4]) RELATIVE a4a
+
+COMPONENT psd_tube2_6a = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_6_1.psd",
+    FN_Conv = "Gas_tables/He3inHe.table", FN_Stop = "Gas_tables/He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat1==1) AT (detx_2[5], dety_2, detz_2[5]) RELATIVE a4a
+  ROTATED (90, 0, ang_2[5]) RELATIVE a4a
+
+
+/*
+COMPONENT e_monitor = E_monitor(
+    nE=100, 
+    filename="testEnergy", 
+    xwidth=.4, 
+    yheight=0.9, 
+    Emin=3, 
+    Emax=6, 
+    restore_neutron=1)
+AT (0, 0, 0) RELATIVE PREVIOUS
+*/
+/*
+COMPONENT divergence_monitor = Divergence_monitor(
+    filename="Divergence", 
+    xwidth=.2, 
+    yheight=.2, 
+    maxdiv_h=5, 
+    maxdiv_v=5, 
+    restore_neutron=1)
+AT (0, 0, 0.88) RELATIVE a4a
+
+COMPONENT psd_monitor890 = PSD_monitor(
+    filename = "withdiv",
+    xwidth=.2, 
+    yheight=.2, 
+    restore_neutron=1)
+AT (0, 0, 0) RELATIVE PREVIOUS
+*/
+//COMPONENT psd_top_a = PSD_monitor(
+//    nx = 500, ny = 500, filename = "psd_top_a", xmin = -0.15,
+//    xmax = 0.15, ymin = 0.7, ymax = 1.7, restore_neutron = 1)
+// WHEN(scat1==1) AT (0, 0.72, 0) RELATIVE a4a  
+// ROTATED (90, 0, 0) RELATIVE a4a
+
+/********************************************************************************
+
+COMPONENT an11b= Monochromator_flat(
+ 	zmin=-ana_l[1]/2, zmax=ana_l[1]/2, ymin=-AW1/2, ymax=AW1/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an1[1], z_an1[1]) RELATIVE a4b
+  ROTATED (90-thet_an1[1], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana1b = 1;
+scat2=1;}
+%}
+
+COMPONENT an12b= Monochromator_flat(
+ 	zmin=-ana_l[1]/2, zmax=ana_l[1]/2, ymin=-AW1/2, ymax=AW1/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an1[2], z_an1[2]) RELATIVE a4b
+  ROTATED (90-thet_an1[2], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana1b = 2;
+scat2=1;}
+%}
+
+COMPONENT an13b= Monochromator_flat(
+ 	zmin=-ana_l[1]/2, zmax=ana_l[1]/2, ymin=-AW1/2, ymax=AW1/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an1[3], z_an1[3]) RELATIVE a4b
+  ROTATED (90-thet_an1[3], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana1b = 3;
+scat2=1;}
+%}
+
+COMPONENT an14b= Monochromator_flat(
+ 	zmin=-ana_l[1]/2, zmax=ana_l[1]/2, ymin=-AW1/2, ymax=AW1/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an1[4], z_an1[4]) RELATIVE a4b
+  ROTATED (90-thet_an1[4], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana1b = 4;
+scat2=1;}
+%}
+
+COMPONENT an15b= Monochromator_flat(
+ 	zmin=-ana_l[1]/2, zmax=ana_l[1]/2, ymin=-AW1/2, ymax=AW1/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an1[5], z_an1[5]) RELATIVE a4b
+  ROTATED (90-thet_an1[5], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana1b = 5;
+scat2=1;}
+%}
+
+COMPONENT an21b= Monochromator_flat(
+ 	zmin=-ana_l[2]/2, zmax=ana_l[2]/2, ymin=-AW2/2, ymax=AW2/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an2[1], z_an2[1]) RELATIVE a4b
+  ROTATED (90-thet_an2[1], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana2b = 1;
+scat2=1;}
+%}
+
+COMPONENT an22b= Monochromator_flat(
+ 	zmin=-ana_l[2]/2, zmax=ana_l[2]/2, ymin=-AW2/2, ymax=AW2/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an2[2], z_an2[2]) RELATIVE a4b
+  ROTATED (90-thet_an2[2], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana2b = 2;
+scat2=1;}
+%}
+
+COMPONENT an23b= Monochromator_flat(
+ 	zmin=-ana_l[2]/2, zmax=ana_l[2]/2, ymin=-AW2/2, ymax=AW2/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an2[3], z_an2[3]) RELATIVE a4b
+  ROTATED (90-thet_an2[3], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana2b = 3;
+scat2=1;}
+%}
+
+COMPONENT an24b= Monochromator_flat(
+ 	zmin=-ana_l[2]/2, zmax=ana_l[2]/2, ymin=-AW2/2, ymax=AW2/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an2[4], z_an2[4]) RELATIVE a4b
+  ROTATED (90-thet_an2[4], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana2b = 4;
+scat2=1;}
+%}
+
+COMPONENT an25b= Monochromator_flat(
+ 	zmin=-ana_l[2]/2, zmax=ana_l[2]/2, ymin=-AW2/2, ymax=AW2/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an2[5], z_an2[5]) RELATIVE a4b
+  ROTATED (90-thet_an2[5], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana2b = 5;
+scat2=1;}
+%}
+
+COMPONENT an31b= Monochromator_flat(
+ 	zmin=-ana_l[3]/2, zmax=ana_l[3]/2, ymin=-AW3/2, ymax=AW3/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an3[1], z_an3[1]) RELATIVE a4b
+  ROTATED (90-thet_an3[1], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana3b = 1;
+scat2=1;}
+%}
+
+COMPONENT an32b= Monochromator_flat(
+ 	zmin=-ana_l[3]/2, zmax=ana_l[3]/2, ymin=-AW3/2, ymax=AW3/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an3[2], z_an3[2]) RELATIVE a4b
+  ROTATED (90-thet_an3[2], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana3b = 2;
+scat2=1;}
+%}
+
+COMPONENT an33b= Monochromator_flat(
+ 	zmin=-ana_l[3]/2, zmax=ana_l[3]/2, ymin=-AW3/2, ymax=AW3/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an3[3], z_an3[3]) RELATIVE a4b
+  ROTATED (90-thet_an3[3], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana3b = 3;
+scat2=1;}
+%}
+
+COMPONENT an34b= Monochromator_flat(
+ 	zmin=-ana_l[3]/2, zmax=ana_l[3]/2, ymin=-AW3/2, ymax=AW3/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an3[4], z_an3[4]) RELATIVE a4b
+  ROTATED (90-thet_an3[4], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana3b = 4;
+scat2=1;}
+%}
+
+COMPONENT an35b= Monochromator_flat(
+ 	zmin=-ana_l[3]/2, zmax=ana_l[3]/2, ymin=-AW3/2, ymax=AW3/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an3[5], z_an3[5]) RELATIVE a4b
+  ROTATED (90-thet_an3[5], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana3b = 5;
+scat2=1;}
+%}
+
+COMPONENT an41b= Monochromator_flat(
+ 	zmin=-ana_l[4]/2, zmax=ana_l[4]/2, ymin=-AW4/2, ymax=AW4/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an4[1], z_an4[1]) RELATIVE a4b
+  ROTATED (90-thet_an4[1], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana4b = 1;
+scat2=1;}
+%}
+
+COMPONENT an42b= Monochromator_flat(
+ 	zmin=-ana_l[4]/2, zmax=ana_l[4]/2, ymin=-AW4/2, ymax=AW4/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an4[2], z_an4[2]) RELATIVE a4b
+  ROTATED (90-thet_an4[2], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana4b = 2;
+scat2=1;}
+%}
+
+COMPONENT an43b= Monochromator_flat(
+ 	zmin=-ana_l[4]/2, zmax=ana_l[4]/2, ymin=-AW4/2, ymax=AW4/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an4[3], z_an4[3]) RELATIVE a4b
+  ROTATED (90-thet_an4[3], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana4b = 3;
+scat2=1;}
+%}
+
+COMPONENT an44b= Monochromator_flat(
+ 	zmin=-ana_l[4]/2, zmax=ana_l[4]/2, ymin=-AW4/2, ymax=AW4/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an4[4], z_an4[4]) RELATIVE a4b
+  ROTATED (90-thet_an4[4], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana4b = 4;
+scat2=1;}
+%}
+
+COMPONENT an45b= Monochromator_flat(
+ 	zmin=-ana_l[4]/2, zmax=ana_l[4]/2, ymin=-AW4/2, ymax=AW4/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an4[5], z_an4[5]) RELATIVE a4b
+  ROTATED (90-thet_an4[5], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana4b = 5;
+scat2=1;}
+%}
+
+COMPONENT an51b= Monochromator_flat(
+ 	zmin=-ana_l[5]/2, zmax=ana_l[5]/2, ymin=-AW5/2, ymax=AW5/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an5[1], z_an5[1]) RELATIVE a4b
+  ROTATED (90-thet_an5[1], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana5b = 1;
+scat2=1;}
+%}
+
+COMPONENT an52b= Monochromator_flat(
+ 	zmin=-ana_l[5]/2, zmax=ana_l[5]/2, ymin=-AW5/2, ymax=AW5/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an5[2], z_an5[2]) RELATIVE a4b
+  ROTATED (90-thet_an5[2], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana5b = 2;
+scat2=1;}
+%}
+
+COMPONENT an53b= Monochromator_flat(
+ 	zmin=-ana_l[5]/2, zmax=ana_l[5]/2, ymin=-AW5/2, ymax=AW5/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an5[3], z_an5[3]) RELATIVE a4b
+  ROTATED (90-thet_an5[3], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana5b = 3;
+scat2=1;}
+%}
+
+COMPONENT an54b= Monochromator_flat(
+ 	zmin=-ana_l[5]/2, zmax=ana_l[5]/2, ymin=-AW5/2, ymax=AW5/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an5[4], z_an5[4]) RELATIVE a4b
+  ROTATED (90-thet_an5[4], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana5b = 4;
+scat2=1;}
+%}
+
+COMPONENT an55b= Monochromator_flat(
+ 	zmin=-ana_l[5]/2, zmax=ana_l[5]/2, ymin=-AW5/2, ymax=AW5/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an5[5], z_an5[5]) RELATIVE a4b
+  ROTATED (90-thet_an5[5], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana5b = 5;
+scat2=1;}
+%}
+
+COMPONENT an61b= Monochromator_flat(
+ 	zmin=-ana_l[6]/2, zmax=ana_l[6]/2, ymin=-AW6/2, ymax=AW6/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an6[1], z_an6[1]) RELATIVE a4b
+  ROTATED (90-thet_an6[1], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana6b = 1;
+scat2=1;}
+%}
+
+COMPONENT an62b= Monochromator_flat(
+ 	zmin=-ana_l[6]/2, zmax=ana_l[6]/2, ymin=-AW6/2, ymax=AW6/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an6[2], z_an6[2]) RELATIVE a4b
+  ROTATED (90-thet_an6[2], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana6b = 2;
+scat2=1;}
+%}
+
+COMPONENT an63b= Monochromator_flat(
+ 	zmin=-ana_l[6]/2, zmax=ana_l[6]/2, ymin=-AW6/2, ymax=AW6/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an6[3], z_an6[3]) RELATIVE a4b
+  ROTATED (90-thet_an6[3], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana6b = 3;
+scat2=1;}
+%}
+
+COMPONENT an64b= Monochromator_flat(
+ 	zmin=-ana_l[6]/2, zmax=ana_l[6]/2, ymin=-AW6/2, ymax=AW6/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an6[4], z_an6[4]) RELATIVE a4b
+  ROTATED (90-thet_an6[4], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana6b = 4;
+scat2=1;}
+%}
+
+COMPONENT an65b= Monochromator_flat(
+ 	zmin=-ana_l[6]/2, zmax=ana_l[6]/2, ymin=-AW6/2, ymax=AW6/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an6[5], z_an6[5]) RELATIVE a4b
+  ROTATED (90-thet_an6[5], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana6b = 5;
+scat2=1;}
+%}
+
+COMPONENT an71b= Monochromator_flat(
+ 	zmin=-ana_l[7]/2, zmax=ana_l[7]/2, ymin=-AW7/2, ymax=AW7/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an7[1], z_an7[1]) RELATIVE a4b
+  ROTATED (90-thet_an7[1], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana7b = 1;
+scat2=1;}
+%}
+
+COMPONENT an72b= Monochromator_flat(
+ 	zmin=-ana_l[7]/2, zmax=ana_l[7]/2, ymin=-AW7/2, ymax=AW7/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an7[2], z_an7[2]) RELATIVE a4b
+  ROTATED (90-thet_an7[2], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana7b = 2;
+scat2=1;}
+%}
+
+COMPONENT an73b= Monochromator_flat(
+ 	zmin=-ana_l[7]/2, zmax=ana_l[7]/2, ymin=-AW7/2, ymax=AW7/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an7[3], z_an7[3]) RELATIVE a4b
+  ROTATED (90-thet_an7[3], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana7b = 3;
+scat2=1;}
+%}
+
+COMPONENT an74b= Monochromator_flat(
+ 	zmin=-ana_l[7]/2, zmax=ana_l[7]/2, ymin=-AW7/2, ymax=AW7/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an7[4], z_an7[4]) RELATIVE a4b
+  ROTATED (90-thet_an7[4], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana7b = 4;
+scat2=1;}
+%}
+
+COMPONENT an75b= Monochromator_flat(
+ 	zmin=-ana_l[7]/2, zmax=ana_l[7]/2, ymin=-AW7/2, ymax=AW7/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an7[5], z_an7[5]) RELATIVE a4b
+  ROTATED (90-thet_an7[5], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana7b = 5;
+scat2=1;}
+%}
+
+COMPONENT an81b= Monochromator_flat(
+ 	zmin=-ana_l[8]/2, zmax=ana_l[8]/2, ymin=-AW8/2, ymax=AW8/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an8[1], z_an8[1]) RELATIVE a4b
+  ROTATED (90-thet_an8[1], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana8b = 1;
+scat2=1;}
+%}
+
+COMPONENT an82b= Monochromator_flat(
+ 	zmin=-ana_l[8]/2, zmax=ana_l[8]/2, ymin=-AW8/2, ymax=AW8/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an8[2], z_an8[2]) RELATIVE a4b
+  ROTATED (90-thet_an8[2], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana8b = 2;
+scat2=1;}
+%}
+
+COMPONENT an83b= Monochromator_flat(
+ 	zmin=-ana_l[8]/2, zmax=ana_l[8]/2, ymin=-AW8/2, ymax=AW8/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an8[3], z_an8[3]) RELATIVE a4b
+  ROTATED (90-thet_an8[3], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana8b = 3;
+scat2=1;}
+%}
+
+COMPONENT an84b= Monochromator_flat(
+ 	zmin=-ana_l[8]/2, zmax=ana_l[8]/2, ymin=-AW8/2, ymax=AW8/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+   AT (0, y_an8[4], z_an8[4]) RELATIVE a4b
+  ROTATED (90-thet_an8[4], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana8b = 4;
+scat2=1;}
+%}
+
+COMPONENT an85b= Monochromator_flat(
+ 	zmin=-ana_l[8]/2, zmax=ana_l[8]/2, ymin=-AW8/2, ymax=AW8/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an8[5], z_an8[5]) RELATIVE a4b
+  ROTATED (90-thet_an8[5], 90.0, 0) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  if(SCATTERED) {Ana8b = 5;
+scat2=1;}
+%}
+
+COMPONENT a5b = Arm()
+AT (0, 0, z_an8[6]+0.2) RELATIVE a4b
+GROUP Analyzer2
+EXTEND %{
+  SCATTER;
+scat2=0;
+%}
+
+// Entire rack of Detectors
+
+COMPONENT psd_tube1_1b = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_1_2.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat2==1) AT (detx_1[0], dety_1, detz_1[0]) RELATIVE a4b
+  ROTATED (90, 0, ang_1[0]) RELATIVE a4b
+
+COMPONENT psd_tube1_2b = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_2_2.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat2==1) AT (detx_1[1], dety_1, detz_1[1]) RELATIVE a4b
+  ROTATED (90, 0, ang_1[1]) RELATIVE a4b
+
+COMPONENT psd_tube1_3b = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_3_2.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat2==1) AT (detx_1[2], dety_1, detz_1[2]) RELATIVE a4b
+  ROTATED (90, 0, ang_1[2]) RELATIVE a4b
+
+COMPONENT psd_tube1_4b = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_4_2.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat2==1) AT (detx_1[3], dety_1, detz_1[3]) RELATIVE a4b
+  ROTATED (90, 0, ang_1[3]) RELATIVE a4b
+
+COMPONENT psd_tube1_5b = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_5_2.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat2==1) AT (detx_1[4], dety_1, detz_1[4]) RELATIVE a4b
+  ROTATED (90, 0, ang_1[4]) RELATIVE a4b 
+
+COMPONENT psd_tube1_6b = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_6_2.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat2==1) AT (detx_1[5], dety_1, detz_1[5]) RELATIVE a4b
+  ROTATED (90, 0, ang_1[5]) RELATIVE a4b
+
+COMPONENT psd_tube1_7b = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_7_2.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat2==1) AT (detx_1[6], dety_1, detz_1[6]) RELATIVE a4b
+  ROTATED (90, 0, ang_1[6]) RELATIVE a4b
+
+COMPONENT psd_tube2_1b = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_1_2.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat2==1) AT (detx_2[0], dety_2, detz_2[0]) RELATIVE a4b
+  ROTATED (90, 0, ang_2[0]) RELATIVE a4b
+
+COMPONENT psd_tube2_2b = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_2_2.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat2==1) AT (detx_2[1], dety_2, detz_2[1]) RELATIVE a4b
+  ROTATED (90, 0, ang_2[1]) RELATIVE a4b
+
+COMPONENT psd_tube2_3b = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_3_2.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat2==1) AT (detx_2[2], dety_2, detz_2[2]) RELATIVE a4b
+  ROTATED (90, 0, ang_2[2]) RELATIVE a4b
+
+COMPONENT psd_tube2_4b = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_4_2.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat2==1) AT (detx_2[3], dety_2, detz_2[3]) RELATIVE a4b
+  ROTATED (90, 0, ang_2[3]) RELATIVE a4b
+
+COMPONENT psd_tube2_5b = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_5_2.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat2==1) AT (detx_2[4], dety_2, detz_2[4]) RELATIVE a4b
+  ROTATED (90, 0, ang_2[4]) RELATIVE a4b
+
+COMPONENT psd_tube2_6b = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_6_2.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat2==1) AT (detx_2[5], dety_2, detz_2[5]) RELATIVE a4b
+  ROTATED (90, 0, ang_2[5]) RELATIVE a4b
+
+//COMPONENT psd_top_b = PSD_monitor(
+//    nx = 500, ny = 500, filename = "psd_top2_b", xmin = -0.15,
+//    xmax = 0.15, ymin = 0.7, ymax = 1.7, restore_neutron = 1)
+// WHEN(scat2==1) AT (0, 0.72, 0) RELATIVE a4b  
+// ROTATED (90, 0, 0) RELATIVE a4b
+
+********************************************************************************
+
+COMPONENT an11c= Monochromator_flat(
+ 	zmin=-ana_l[1]/2, zmax=ana_l[1]/2, ymin=-AW1/2, ymax=AW1/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an1[1], z_an1[1]) RELATIVE a4c
+  ROTATED (90-thet_an1[1], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana1c = 1;
+scat3=1;}
+%}
+
+COMPONENT an12c= Monochromator_flat(
+ 	zmin=-ana_l[1]/2, zmax=ana_l[1]/2, ymin=-AW1/2, ymax=AW1/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an1[2], z_an1[2]) RELATIVE a4c
+  ROTATED (90-thet_an1[2], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana1c = 2;
+scat3=1;}
+%}
+
+COMPONENT an13c= Monochromator_flat(
+ 	zmin=-ana_l[1]/2, zmax=ana_l[1]/2, ymin=-AW1/2, ymax=AW1/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an1[3], z_an1[3]) RELATIVE a4c
+  ROTATED (90-thet_an1[3], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana1c = 3;
+scat3=1;}
+%}
+
+COMPONENT an14c= Monochromator_flat(
+ 	zmin=-ana_l[1]/2, zmax=ana_l[1]/2, ymin=-AW1/2, ymax=AW1/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an1[4], z_an1[4]) RELATIVE a4c
+  ROTATED (90-thet_an1[4], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana1c = 4;
+scat3=1;}
+%}
+
+COMPONENT an15c= Monochromator_flat(
+ 	zmin=-ana_l[1]/2, zmax=ana_l[1]/2, ymin=-AW1/2, ymax=AW1/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an1[5], z_an1[5]) RELATIVE a4c
+  ROTATED (90-thet_an1[5], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana1c = 5;
+scat3=1;}
+%}
+
+COMPONENT an21c= Monochromator_flat(
+ 	zmin=-ana_l[2]/2, zmax=ana_l[2]/2, ymin=-AW2/2, ymax=AW2/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an2[1], z_an2[1]) RELATIVE a4c
+  ROTATED (90-thet_an2[1], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana2c = 1;
+scat3=1;}
+%}
+
+COMPONENT an22c= Monochromator_flat(
+ 	zmin=-ana_l[2]/2, zmax=ana_l[2]/2, ymin=-AW2/2, ymax=AW2/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an2[2], z_an2[2]) RELATIVE a4c
+  ROTATED (90-thet_an2[2], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana2c = 2;
+scat3=1;}
+%}
+
+COMPONENT an23c= Monochromator_flat(
+ 	zmin=-ana_l[2]/2, zmax=ana_l[2]/2, ymin=-AW2/2, ymax=AW2/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an2[3], z_an2[3]) RELATIVE a4c
+  ROTATED (90-thet_an2[3], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana2c = 3;
+scat3=1;}
+%}
+
+COMPONENT an24c= Monochromator_flat(
+ 	zmin=-ana_l[2]/2, zmax=ana_l[2]/2, ymin=-AW2/2, ymax=AW2/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an2[4], z_an2[4]) RELATIVE a4c
+  ROTATED (90-thet_an2[4], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana2c = 4;
+scat3=1;}
+%}
+
+COMPONENT an25c= Monochromator_flat(
+ 	zmin=-ana_l[2]/2, zmax=ana_l[2]/2, ymin=-AW2/2, ymax=AW2/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an2[5], z_an2[5]) RELATIVE a4c
+  ROTATED (90-thet_an2[5], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana2c = 5;
+scat3=1;}
+%}
+
+COMPONENT an31c= Monochromator_flat(
+ 	zmin=-ana_l[3]/2, zmax=ana_l[3]/2, ymin=-AW3/2, ymax=AW3/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an3[1], z_an3[1]) RELATIVE a4c
+  ROTATED (90-thet_an3[1], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana3c = 1;
+scat3=1;}
+%}
+
+COMPONENT an32c= Monochromator_flat(
+ 	zmin=-ana_l[3]/2, zmax=ana_l[3]/2, ymin=-AW3/2, ymax=AW3/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an3[2], z_an3[2]) RELATIVE a4c
+  ROTATED (90-thet_an3[2], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana3c = 2;
+scat3=1;}
+%}
+
+COMPONENT an33c= Monochromator_flat(
+ 	zmin=-ana_l[3]/2, zmax=ana_l[3]/2, ymin=-AW3/2, ymax=AW3/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an3[3], z_an3[3]) RELATIVE a4c
+  ROTATED (90-thet_an3[3], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana3c = 3;
+scat3=1;}
+%}
+
+COMPONENT an34c= Monochromator_flat(
+ 	zmin=-ana_l[3]/2, zmax=ana_l[3]/2, ymin=-AW3/2, ymax=AW3/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an3[4], z_an3[4]) RELATIVE a4c
+  ROTATED (90-thet_an3[4], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana3c = 4;
+scat3=1;}
+%}
+
+COMPONENT an35c= Monochromator_flat(
+ 	zmin=-ana_l[3]/2, zmax=ana_l[3]/2, ymin=-AW3/2, ymax=AW3/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an3[5], z_an3[5]) RELATIVE a4c
+  ROTATED (90-thet_an3[5], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana3c = 5;
+scat3=1;}
+%}
+
+COMPONENT an41c= Monochromator_flat(
+ 	zmin=-ana_l[4]/2, zmax=ana_l[4]/2, ymin=-AW4/2, ymax=AW4/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an4[1], z_an4[1]) RELATIVE a4c
+  ROTATED (90-thet_an4[1], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana4c = 1;
+scat3=1;}
+%}
+
+COMPONENT an42c= Monochromator_flat(
+ 	zmin=-ana_l[4]/2, zmax=ana_l[4]/2, ymin=-AW4/2, ymax=AW4/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an4[2], z_an4[2]) RELATIVE a4c
+  ROTATED (90-thet_an4[2], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana4c = 2;
+scat3=1;}
+%}
+
+COMPONENT an43c= Monochromator_flat(
+ 	zmin=-ana_l[4]/2, zmax=ana_l[4]/2, ymin=-AW4/2, ymax=AW4/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an4[3], z_an4[3]) RELATIVE a4c
+  ROTATED (90-thet_an4[3], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana4c = 3;
+scat3=1;}
+%}
+
+COMPONENT an44c= Monochromator_flat(
+ 	zmin=-ana_l[4]/2, zmax=ana_l[4]/2, ymin=-AW4/2, ymax=AW4/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an4[4], z_an4[4]) RELATIVE a4c
+  ROTATED (90-thet_an4[4], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana4c = 4;
+scat3=1;}
+%}
+
+COMPONENT an45c= Monochromator_flat(
+ 	zmin=-ana_l[4]/2, zmax=ana_l[4]/2, ymin=-AW4/2, ymax=AW4/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an4[5], z_an4[5]) RELATIVE a4c
+  ROTATED (90-thet_an4[5], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana4c = 5;
+scat3=1;}
+%}
+
+COMPONENT an51c= Monochromator_flat(
+ 	zmin=-ana_l[5]/2, zmax=ana_l[5]/2, ymin=-AW5/2, ymax=AW5/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an5[1], z_an5[1]) RELATIVE a4c
+  ROTATED (90-thet_an5[1], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana5c = 1;
+scat3=1;}
+%}
+
+COMPONENT an52c= Monochromator_flat(
+ 	zmin=-ana_l[5]/2, zmax=ana_l[5]/2, ymin=-AW5/2, ymax=AW5/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an5[2], z_an5[2]) RELATIVE a4c
+  ROTATED (90-thet_an5[2], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana5c = 2;
+scat3=1;}
+%}
+
+COMPONENT an53c= Monochromator_flat(
+ 	zmin=-ana_l[5]/2, zmax=ana_l[5]/2, ymin=-AW5/2, ymax=AW5/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an5[3], z_an5[3]) RELATIVE a4c
+  ROTATED (90-thet_an5[3], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana5c = 3;
+scat3=1;}
+%}
+
+COMPONENT an54c= Monochromator_flat(
+ 	zmin=-ana_l[5]/2, zmax=ana_l[5]/2, ymin=-AW5/2, ymax=AW5/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an5[4], z_an5[4]) RELATIVE a4c
+  ROTATED (90-thet_an5[4], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana5c = 4;
+scat3=1;}
+%}
+
+COMPONENT an55c= Monochromator_flat(
+ 	zmin=-ana_l[5]/2, zmax=ana_l[5]/2, ymin=-AW5/2, ymax=AW5/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an5[5], z_an5[5]) RELATIVE a4c
+  ROTATED (90-thet_an5[5], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana5c = 5;
+scat3=1;}
+%}
+
+COMPONENT an61c= Monochromator_flat(
+ 	zmin=-ana_l[6]/2, zmax=ana_l[6]/2, ymin=-AW6/2, ymax=AW6/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an6[1], z_an6[1]) RELATIVE a4c
+  ROTATED (90-thet_an6[1], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana6c = 1;
+scat3=1;}
+%}
+
+COMPONENT an62c= Monochromator_flat(
+ 	zmin=-ana_l[6]/2, zmax=ana_l[6]/2, ymin=-AW6/2, ymax=AW6/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an6[2], z_an6[2]) RELATIVE a4c
+  ROTATED (90-thet_an6[2], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana6c = 2;
+scat3=1;}
+%}
+
+COMPONENT an63c= Monochromator_flat(
+ 	zmin=-ana_l[6]/2, zmax=ana_l[6]/2, ymin=-AW6/2, ymax=AW6/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an6[3], z_an6[3]) RELATIVE a4c
+  ROTATED (90-thet_an6[3], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana6c = 3;
+scat3=1;}
+%}
+
+COMPONENT an64c= Monochromator_flat(
+ 	zmin=-ana_l[6]/2, zmax=ana_l[6]/2, ymin=-AW6/2, ymax=AW6/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an6[4], z_an6[4]) RELATIVE a4c
+  ROTATED (90-thet_an6[4], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana6c = 4;
+scat3=1;}
+%}
+
+COMPONENT an65c= Monochromator_flat(
+ 	zmin=-ana_l[6]/2, zmax=ana_l[6]/2, ymin=-AW6/2, ymax=AW6/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an6[5], z_an6[5]) RELATIVE a4c
+  ROTATED (90-thet_an6[5], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana6c = 5;
+scat3=1;}
+%}
+
+COMPONENT an71c= Monochromator_flat(
+ 	zmin=-ana_l[7]/2, zmax=ana_l[7]/2, ymin=-AW7/2, ymax=AW7/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an7[1], z_an7[1]) RELATIVE a4c
+  ROTATED (90-thet_an7[1], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana7c = 1;
+scat3=1;}
+%}
+
+COMPONENT an72c= Monochromator_flat(
+ 	zmin=-ana_l[7]/2, zmax=ana_l[7]/2, ymin=-AW7/2, ymax=AW7/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an7[2], z_an7[2]) RELATIVE a4c
+  ROTATED (90-thet_an7[2], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana7c = 2;
+scat3=1;}
+%}
+
+COMPONENT an73c= Monochromator_flat(
+ 	zmin=-ana_l[7]/2, zmax=ana_l[7]/2, ymin=-AW7/2, ymax=AW7/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an7[3], z_an7[3]) RELATIVE a4c
+  ROTATED (90-thet_an7[3], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana7c = 3;
+scat3=1;}
+%}
+
+COMPONENT an74c= Monochromator_flat(
+ 	zmin=-ana_l[7]/2, zmax=ana_l[7]/2, ymin=-AW7/2, ymax=AW7/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an7[4], z_an7[4]) RELATIVE a4c
+  ROTATED (90-thet_an7[4], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana7c = 4;
+scat3=1;}
+%}
+
+COMPONENT an75c= Monochromator_flat(
+ 	zmin=-ana_l[7]/2, zmax=ana_l[7]/2, ymin=-AW7/2, ymax=AW7/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an7[5], z_an7[5]) RELATIVE a4c
+  ROTATED (90-thet_an7[5], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana7c = 5;
+scat3=1;}
+%}
+
+COMPONENT an81c= Monochromator_flat(
+ 	zmin=-ana_l[8]/2, zmax=ana_l[8]/2, ymin=-AW8/2, ymax=AW8/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an8[1], z_an8[1]) RELATIVE a4c
+  ROTATED (90-thet_an8[1], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana8c = 1;
+scat3=1;}
+%}
+
+COMPONENT an82c= Monochromator_flat(
+ 	zmin=-ana_l[8]/2, zmax=ana_l[8]/2, ymin=-AW8/2, ymax=AW8/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an8[2], z_an8[2]) RELATIVE a4c
+  ROTATED (90-thet_an8[2], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana8c = 2;
+scat3=1;}
+%}
+
+COMPONENT an83c= Monochromator_flat(
+ 	zmin=-ana_l[8]/2, zmax=ana_l[8]/2, ymin=-AW8/2, ymax=AW8/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an8[3], z_an8[3]) RELATIVE a4c
+  ROTATED (90-thet_an8[3], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana8c = 3;
+scat3=1;}
+%}
+
+COMPONENT an84c= Monochromator_flat(
+ 	zmin=-ana_l[8]/2, zmax=ana_l[8]/2, ymin=-AW8/2, ymax=AW8/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+   AT (0, y_an8[4], z_an8[4]) RELATIVE a4c
+  ROTATED (90-thet_an8[4], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana8c = 4;
+scat3=1;}
+%}
+
+COMPONENT an85c= Monochromator_flat(
+ 	zmin=-ana_l[8]/2, zmax=ana_l[8]/2, ymin=-AW8/2, ymax=AW8/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an8[5], z_an8[5]) RELATIVE a4c
+  ROTATED (90-thet_an8[5], 90.0, 0) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  if(SCATTERED) {Ana8c = 5;
+scat3=1;}
+%}
+
+COMPONENT a5c = Arm()
+AT (0, 0, z_an8[6]+0.2) RELATIVE a4c
+GROUP Analyzer3
+EXTEND %{
+  SCATTER;
+scat3=0;
+%}
+
+
+// Entire rack of Detectors
+
+COMPONENT psd_tube1_1c = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_1_3.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat3==1) AT (detx_1[0], dety_1, detz_1[0]) RELATIVE a4c
+  ROTATED (90, 0, ang_1[0]) RELATIVE a4c
+
+COMPONENT psd_tube1_2c = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_2_3.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat3==1) AT (detx_1[1], dety_1, detz_1[1]) RELATIVE a4c
+  ROTATED (90, 0, ang_1[1]) RELATIVE a4c
+
+COMPONENT psd_tube1_3c = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_3_3.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat3==1) AT (detx_1[2], dety_1, detz_1[2]) RELATIVE a4c
+  ROTATED (90, 0, ang_1[2]) RELATIVE a4c
+
+COMPONENT psd_tube1_4c = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_4_3.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat3==1) AT (detx_1[3], dety_1, detz_1[3]) RELATIVE a4c
+  ROTATED (90, 0, ang_1[3]) RELATIVE a4c
+
+COMPONENT psd_tube1_5c = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_5_3.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat3==1) AT (detx_1[4], dety_1, detz_1[4]) RELATIVE a4c
+  ROTATED (90, 0, ang_1[4]) RELATIVE a4c
+
+COMPONENT psd_tube1_6c = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_6_3.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat3==1) AT (detx_1[5], dety_1, detz_1[5]) RELATIVE a4c
+  ROTATED (90, 0, ang_1[5]) RELATIVE a4c
+
+COMPONENT psd_tube1_7c = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_7_3.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat3==1) AT (detx_1[6], dety_1, detz_1[6]) RELATIVE a4c
+  ROTATED (90, 0, ang_1[6]) RELATIVE a4c
+
+COMPONENT psd_tube2_1c = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_1_3.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat3==1) AT (detx_2[0], dety_2, detz_2[0]) RELATIVE a4c
+  ROTATED (90, 0, ang_2[0]) RELATIVE a4c
+
+COMPONENT psd_tube2_2c = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_2_3.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat3==1) AT (detx_2[1], dety_2, detz_2[1]) RELATIVE a4c
+  ROTATED (90, 0, ang_2[1]) RELATIVE a4c
+
+COMPONENT psd_tube2_3c = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_3_3.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat3==1) AT (detx_2[2], dety_2, detz_2[2]) RELATIVE a4c
+  ROTATED (90, 0, ang_2[2]) RELATIVE a4c
+
+COMPONENT psd_tube2_4c = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_4_3.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat3==1) AT (detx_2[3], dety_2, detz_2[3]) RELATIVE a4c
+  ROTATED (90, 0, ang_2[3]) RELATIVE a4c
+
+COMPONENT psd_tube2_5c = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_5_3.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat3==1) AT (detx_2[4], dety_2, detz_2[4]) RELATIVE a4c
+  ROTATED (90, 0, ang_2[4]) RELATIVE a4c
+
+COMPONENT psd_tube2_6c = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_6_3.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat3==1) AT (detx_2[5], dety_2, detz_2[5]) RELATIVE a4c
+  ROTATED (90, 0, ang_2[5]) RELATIVE a4c
+
+********************************************************************************
+
+COMPONENT an11d= Monochromator_flat(
+ 	zmin=-ana_l[1]/2, zmax=ana_l[1]/2, ymin=-AW1/2, ymax=AW1/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an1[1], z_an1[1]) RELATIVE a4d
+  ROTATED (90-thet_an1[1], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana1d = 1;
+scat4=1;}
+%}
+
+COMPONENT an12d= Monochromator_flat(
+ 	zmin=-ana_l[1]/2, zmax=ana_l[1]/2, ymin=-AW1/2, ymax=AW1/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an1[2], z_an1[2]) RELATIVE a4d
+  ROTATED (90-thet_an1[2], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana1d = 2;
+scat4=1;}
+%}
+
+COMPONENT an13d= Monochromator_flat(
+ 	zmin=-ana_l[1]/2, zmax=ana_l[1]/2, ymin=-AW1/2, ymax=AW1/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an1[3], z_an1[3]) RELATIVE a4d
+  ROTATED (90-thet_an1[3], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana1d = 3;
+scat4=1;}
+%}
+
+COMPONENT an14d= Monochromator_flat(
+ 	zmin=-ana_l[1]/2, zmax=ana_l[1]/2, ymin=-AW1/2, ymax=AW1/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an1[4], z_an1[4]) RELATIVE a4d
+  ROTATED (90-thet_an1[4], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana1d = 4;
+scat4=1;}
+%}
+
+COMPONENT an15d= Monochromator_flat(
+ 	zmin=-ana_l[1]/2, zmax=ana_l[1]/2, ymin=-AW1/2, ymax=AW1/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an1[5], z_an1[5]) RELATIVE a4d
+  ROTATED (90-thet_an1[5], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana1d = 5;
+scat4=1;}
+%}
+
+COMPONENT an21d= Monochromator_flat(
+ 	zmin=-ana_l[2]/2, zmax=ana_l[2]/2, ymin=-AW2/2, ymax=AW2/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an2[1], z_an2[1]) RELATIVE a4d
+  ROTATED (90-thet_an2[1], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana2d = 1;
+scat4=1;}
+%}
+
+COMPONENT an22d= Monochromator_flat(
+ 	zmin=-ana_l[2]/2, zmax=ana_l[2]/2, ymin=-AW2/2, ymax=AW2/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an2[2], z_an2[2]) RELATIVE a4d
+  ROTATED (90-thet_an2[2], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana2d = 2;
+scat4=1;}
+%}
+
+COMPONENT an23d= Monochromator_flat(
+ 	zmin=-ana_l[2]/2, zmax=ana_l[2]/2, ymin=-AW2/2, ymax=AW2/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an2[3], z_an2[3]) RELATIVE a4d
+  ROTATED (90-thet_an2[3], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana2d = 3;
+scat4=1;}
+%}
+
+COMPONENT an24d= Monochromator_flat(
+ 	zmin=-ana_l[2]/2, zmax=ana_l[2]/2, ymin=-AW2/2, ymax=AW2/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an2[4], z_an2[4]) RELATIVE a4d
+  ROTATED (90-thet_an2[4], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana2d = 4;
+scat4=1;}
+%}
+
+COMPONENT an25d= Monochromator_flat(
+ 	zmin=-ana_l[2]/2, zmax=ana_l[2]/2, ymin=-AW2/2, ymax=AW2/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an2[5], z_an2[5]) RELATIVE a4d
+  ROTATED (90-thet_an2[5], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana2d = 5;
+scat4=1;}
+%}
+
+COMPONENT an31d= Monochromator_flat(
+ 	zmin=-ana_l[3]/2, zmax=ana_l[3]/2, ymin=-AW3/2, ymax=AW3/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an3[1], z_an3[1]) RELATIVE a4d
+  ROTATED (90-thet_an3[1], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana3d = 1;
+scat4=1;}
+%}
+
+COMPONENT an32d= Monochromator_flat(
+ 	zmin=-ana_l[3]/2, zmax=ana_l[3]/2, ymin=-AW3/2, ymax=AW3/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an3[2], z_an3[2]) RELATIVE a4d
+  ROTATED (90-thet_an3[2], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana3d = 2;
+scat4=1;}
+%}
+
+COMPONENT an33d= Monochromator_flat(
+ 	zmin=-ana_l[3]/2, zmax=ana_l[3]/2, ymin=-AW3/2, ymax=AW3/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an3[3], z_an3[3]) RELATIVE a4d
+  ROTATED (90-thet_an3[3], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana3d = 3;
+scat4=1;}
+%}
+
+COMPONENT an34d= Monochromator_flat(
+ 	zmin=-ana_l[3]/2, zmax=ana_l[3]/2, ymin=-AW3/2, ymax=AW3/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an3[4], z_an3[4]) RELATIVE a4d
+  ROTATED (90-thet_an3[4], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana3d = 4;
+scat4=1;}
+%}
+
+COMPONENT an35d= Monochromator_flat(
+ 	zmin=-ana_l[3]/2, zmax=ana_l[3]/2, ymin=-AW3/2, ymax=AW3/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an3[5], z_an3[5]) RELATIVE a4d
+  ROTATED (90-thet_an3[5], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana3d = 5;
+scat4=1;}
+%}
+
+COMPONENT an41d= Monochromator_flat(
+ 	zmin=-ana_l[4]/2, zmax=ana_l[4]/2, ymin=-AW4/2, ymax=AW4/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an4[1], z_an4[1]) RELATIVE a4d
+  ROTATED (90-thet_an4[1], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana4d = 1;
+scat4=1;}
+%}
+
+COMPONENT an42d= Monochromator_flat(
+ 	zmin=-ana_l[4]/2, zmax=ana_l[4]/2, ymin=-AW4/2, ymax=AW4/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an4[2], z_an4[2]) RELATIVE a4d
+  ROTATED (90-thet_an4[2], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana4d = 2;
+scat4=1;}
+%}
+
+COMPONENT an43d= Monochromator_flat(
+ 	zmin=-ana_l[4]/2, zmax=ana_l[4]/2, ymin=-AW4/2, ymax=AW4/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an4[3], z_an4[3]) RELATIVE a4d
+  ROTATED (90-thet_an4[3], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana4d = 3;
+scat4=1;}
+%}
+
+COMPONENT an44d= Monochromator_flat(
+ 	zmin=-ana_l[4]/2, zmax=ana_l[4]/2, ymin=-AW4/2, ymax=AW4/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an4[4], z_an4[4]) RELATIVE a4d
+  ROTATED (90-thet_an4[4], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana4d = 4;
+scat4=1;}
+%}
+
+COMPONENT an45d= Monochromator_flat(
+ 	zmin=-ana_l[4]/2, zmax=ana_l[4]/2, ymin=-AW4/2, ymax=AW4/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an4[5], z_an4[5]) RELATIVE a4d
+  ROTATED (90-thet_an4[5], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana4d = 5;
+scat4=1;}
+%}
+
+COMPONENT an51d= Monochromator_flat(
+ 	zmin=-ana_l[5]/2, zmax=ana_l[5]/2, ymin=-AW5/2, ymax=AW5/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an5[1], z_an5[1]) RELATIVE a4d
+  ROTATED (90-thet_an5[1], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana5d = 1;
+scat4=1;}
+%}
+
+COMPONENT an52d= Monochromator_flat(
+ 	zmin=-ana_l[5]/2, zmax=ana_l[5]/2, ymin=-AW5/2, ymax=AW5/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an5[2], z_an5[2]) RELATIVE a4d
+  ROTATED (90-thet_an5[2], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana5d = 2;
+scat4=1;}
+%}
+
+COMPONENT an53d= Monochromator_flat(
+ 	zmin=-ana_l[5]/2, zmax=ana_l[5]/2, ymin=-AW5/2, ymax=AW5/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an5[3], z_an5[3]) RELATIVE a4d
+  ROTATED (90-thet_an5[3], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana5d = 3;
+scat4=1;}
+%}
+
+COMPONENT an54d= Monochromator_flat(
+ 	zmin=-ana_l[5]/2, zmax=ana_l[5]/2, ymin=-AW5/2, ymax=AW5/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an5[4], z_an5[4]) RELATIVE a4d
+  ROTATED (90-thet_an5[4], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana5d = 4;
+scat4=1;}
+%}
+
+COMPONENT an55d= Monochromator_flat(
+ 	zmin=-ana_l[5]/2, zmax=ana_l[5]/2, ymin=-AW5/2, ymax=AW5/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an5[5], z_an5[5]) RELATIVE a4d
+  ROTATED (90-thet_an5[5], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana5d = 5;
+scat4=1;}
+%}
+
+COMPONENT an61d= Monochromator_flat(
+ 	zmin=-ana_l[6]/2, zmax=ana_l[6]/2, ymin=-AW6/2, ymax=AW6/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an6[1], z_an6[1]) RELATIVE a4d
+  ROTATED (90-thet_an6[1], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana6d = 1;
+scat4=1;}
+%}
+
+COMPONENT an62d= Monochromator_flat(
+ 	zmin=-ana_l[6]/2, zmax=ana_l[6]/2, ymin=-AW6/2, ymax=AW6/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an6[2], z_an6[2]) RELATIVE a4d
+  ROTATED (90-thet_an6[2], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana6d = 2;
+scat4=1;}
+%}
+
+COMPONENT an63d= Monochromator_flat(
+ 	zmin=-ana_l[6]/2, zmax=ana_l[6]/2, ymin=-AW6/2, ymax=AW6/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an6[3], z_an6[3]) RELATIVE a4d
+  ROTATED (90-thet_an6[3], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana6d = 3;
+scat4=1;}
+%}
+
+COMPONENT an64d= Monochromator_flat(
+ 	zmin=-ana_l[6]/2, zmax=ana_l[6]/2, ymin=-AW6/2, ymax=AW6/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an6[4], z_an6[4]) RELATIVE a4d
+  ROTATED (90-thet_an6[4], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana6d = 4;
+scat4=1;}
+%}
+
+COMPONENT an65d= Monochromator_flat(
+ 	zmin=-ana_l[6]/2, zmax=ana_l[6]/2, ymin=-AW6/2, ymax=AW6/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an6[5], z_an6[5]) RELATIVE a4d
+  ROTATED (90-thet_an6[5], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana6d = 5;
+scat4=1;}
+%}
+
+COMPONENT an71d= Monochromator_flat(
+ 	zmin=-ana_l[7]/2, zmax=ana_l[7]/2, ymin=-AW7/2, ymax=AW7/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an7[1], z_an7[1]) RELATIVE a4d
+  ROTATED (90-thet_an7[1], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana7d = 1;
+scat4=1;}
+%}
+
+COMPONENT an72d= Monochromator_flat(
+ 	zmin=-ana_l[7]/2, zmax=ana_l[7]/2, ymin=-AW7/2, ymax=AW7/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an7[2], z_an7[2]) RELATIVE a4d
+  ROTATED (90-thet_an7[2], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana7d = 2;
+scat4=1;}
+%}
+
+COMPONENT an73d= Monochromator_flat(
+ 	zmin=-ana_l[7]/2, zmax=ana_l[7]/2, ymin=-AW7/2, ymax=AW7/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an7[3], z_an7[3]) RELATIVE a4d
+  ROTATED (90-thet_an7[3], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana7d = 3;
+scat4=1;}
+%}
+
+COMPONENT an74d= Monochromator_flat(
+ 	zmin=-ana_l[7]/2, zmax=ana_l[7]/2, ymin=-AW7/2, ymax=AW7/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an7[4], z_an7[4]) RELATIVE a4d
+  ROTATED (90-thet_an7[4], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana7d = 4;
+scat4=1;}
+%}
+
+COMPONENT an75d= Monochromator_flat(
+ 	zmin=-ana_l[7]/2, zmax=ana_l[7]/2, ymin=-AW7/2, ymax=AW7/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an7[5], z_an7[5]) RELATIVE a4d
+  ROTATED (90-thet_an7[5], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana7d = 5;
+scat4=1;}
+%}
+
+COMPONENT an81d= Monochromator_flat(
+ 	zmin=-ana_l[8]/2, zmax=ana_l[8]/2, ymin=-AW8/2, ymax=AW8/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an8[1], z_an8[1]) RELATIVE a4d
+  ROTATED (90-thet_an8[1], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana8d = 1;
+scat4=1;}
+%}
+
+COMPONENT an82d= Monochromator_flat(
+ 	zmin=-ana_l[8]/2, zmax=ana_l[8]/2, ymin=-AW8/2, ymax=AW8/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an8[2], z_an8[2]) RELATIVE a4d
+  ROTATED (90-thet_an8[2], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana8d = 2;
+scat4=1;}
+%}
+
+COMPONENT an83d= Monochromator_flat(
+ 	zmin=-ana_l[8]/2, zmax=ana_l[8]/2, ymin=-AW8/2, ymax=AW8/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an8[3], z_an8[3]) RELATIVE a4d
+  ROTATED (90-thet_an8[3], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana8d = 3;
+scat4=1;}
+%}
+
+COMPONENT an84d= Monochromator_flat(
+ 	zmin=-ana_l[8]/2, zmax=ana_l[8]/2, ymin=-AW8/2, ymax=AW8/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+   AT (0, y_an8[4], z_an8[4]) RELATIVE a4d
+  ROTATED (90-thet_an8[4], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana8d = 4;
+scat4=1;}
+%}
+
+COMPONENT an85d= Monochromator_flat(
+ 	zmin=-ana_l[8]/2, zmax=ana_l[8]/2, ymin=-AW8/2, ymax=AW8/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an8[5], z_an8[5]) RELATIVE a4d
+  ROTATED (90-thet_an8[5], 90.0, 0) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  if(SCATTERED) {Ana8d = 5;
+scat4=1;}
+%}
+
+COMPONENT a5d = Arm()
+AT (0, 0, z_an8[6]+0.2) RELATIVE a4d
+GROUP Analyzer4
+EXTEND %{
+  SCATTER;
+scat4=0;
+%}
+
+
+// Entire rack of Detectors
+
+COMPONENT psd_tube1_1d = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_1_4.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat4==1) AT (detx_1[0], dety_1, detz_1[0]) RELATIVE a4d
+  ROTATED (90, 0, ang_1[0]) RELATIVE a4d
+
+COMPONENT psd_tube1_2d = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_2_4.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat4==1) AT (detx_1[1], dety_1, detz_1[1]) RELATIVE a4d
+  ROTATED (90, 0, ang_1[1]) RELATIVE a4d
+
+COMPONENT psd_tube1_3d = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_3_4.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat4==1) AT (detx_1[2], dety_1, detz_1[2]) RELATIVE a4d
+  ROTATED (90, 0, ang_1[2]) RELATIVE a4d
+
+COMPONENT psd_tube1_4d = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_4_4.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat4==1) AT (detx_1[3], dety_1, detz_1[3]) RELATIVE a4d
+  ROTATED (90, 0, ang_1[3]) RELATIVE a4d
+
+COMPONENT psd_tube1_5d = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_5_4.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat4==1) AT (detx_1[4], dety_1, detz_1[4]) RELATIVE a4d
+  ROTATED (90, 0, ang_1[4]) RELATIVE a4d
+
+COMPONENT psd_tube1_6d = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_6_4.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat4==1) AT (detx_1[5], dety_1, detz_1[5]) RELATIVE a4d
+  ROTATED (90, 0, ang_1[5]) RELATIVE a4d
+
+COMPONENT psd_tube1_7d = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_7_4.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat4==1) AT (detx_1[6], dety_1, detz_1[6]) RELATIVE a4d
+  ROTATED (90, 0, ang_1[6]) RELATIVE a4d
+
+COMPONENT psd_tube2_1d = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_1_4.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat4==1) AT (detx_2[0], dety_2, detz_2[0]) RELATIVE a4d
+  ROTATED (90, 0, ang_2[0]) RELATIVE a4d
+
+COMPONENT psd_tube2_2d = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_2_4.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat4==1) AT (detx_2[1], dety_2, detz_2[1]) RELATIVE a4d
+  ROTATED (90, 0, ang_2[1]) RELATIVE a4d
+
+COMPONENT psd_tube2_3d = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_3_4.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat4==1) AT (detx_2[2], dety_2, detz_2[2]) RELATIVE a4d
+  ROTATED (90, 0, ang_2[2]) RELATIVE a4d
+
+COMPONENT psd_tube2_4d = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_4_4.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat4==1) AT (detx_2[3], dety_2, detz_2[3]) RELATIVE a4d
+  ROTATED (90, 0, ang_2[3]) RELATIVE a4d
+
+COMPONENT psd_tube2_5d = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_5_4.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat4==1) AT (detx_2[4], dety_2, detz_2[4]) RELATIVE a4d
+  ROTATED (90, 0, ang_2[4]) RELATIVE a4d
+
+COMPONENT psd_tube2_6d = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_6_4.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat4==1) AT (detx_2[5], dety_2, detz_2[5]) RELATIVE a4d
+  ROTATED (90, 0, ang_2[5]) RELATIVE a4d
+
+********************************************************************************
+
+COMPONENT an11e= Monochromator_flat(
+ 	zmin=-ana_l[1]/2, zmax=ana_l[1]/2, ymin=-AW1/2, ymax=AW1/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an1[1], z_an1[1]) RELATIVE a4e
+  ROTATED (90-thet_an1[1], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana1e = 1;
+scat5=1;}
+%}
+
+COMPONENT an12e= Monochromator_flat(
+ 	zmin=-ana_l[1]/2, zmax=ana_l[1]/2, ymin=-AW1/2, ymax=AW1/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an1[2], z_an1[2]) RELATIVE a4e
+  ROTATED (90-thet_an1[2], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana1e = 2;
+scat5=1;}
+%}
+
+COMPONENT an13e= Monochromator_flat(
+ 	zmin=-ana_l[1]/2, zmax=ana_l[1]/2, ymin=-AW1/2, ymax=AW1/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an1[3], z_an1[3]) RELATIVE a4e
+  ROTATED (90-thet_an1[3], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana1e = 3;
+scat5=1;}
+%}
+
+COMPONENT an14e= Monochromator_flat(
+ 	zmin=-ana_l[1]/2, zmax=ana_l[1]/2, ymin=-AW1/2, ymax=AW1/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an1[4], z_an1[4]) RELATIVE a4e
+  ROTATED (90-thet_an1[4], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana1e = 4;
+scat5=1;}
+%}
+
+COMPONENT an15e= Monochromator_flat(
+ 	zmin=-ana_l[1]/2, zmax=ana_l[1]/2, ymin=-AW1/2, ymax=AW1/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an1[5], z_an1[5]) RELATIVE a4e
+  ROTATED (90-thet_an1[5], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana1e = 5;
+scat5=1;}
+%}
+
+COMPONENT an21e= Monochromator_flat(
+ 	zmin=-ana_l[2]/2, zmax=ana_l[2]/2, ymin=-AW2/2, ymax=AW2/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an2[1], z_an2[1]) RELATIVE a4e
+  ROTATED (90-thet_an2[1], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana2e = 1;
+scat5=1;}
+%}
+
+COMPONENT an22e= Monochromator_flat(
+ 	zmin=-ana_l[2]/2, zmax=ana_l[2]/2, ymin=-AW2/2, ymax=AW2/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an2[2], z_an2[2]) RELATIVE a4e
+  ROTATED (90-thet_an2[2], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana2e = 2;
+scat5=1;}
+%}
+
+COMPONENT an23e= Monochromator_flat(
+ 	zmin=-ana_l[2]/2, zmax=ana_l[2]/2, ymin=-AW2/2, ymax=AW2/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an2[3], z_an2[3]) RELATIVE a4e
+  ROTATED (90-thet_an2[3], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana2e = 3;
+scat5=1;}
+%}
+
+COMPONENT an24e= Monochromator_flat(
+ 	zmin=-ana_l[2]/2, zmax=ana_l[2]/2, ymin=-AW2/2, ymax=AW2/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an2[4], z_an2[4]) RELATIVE a4e
+  ROTATED (90-thet_an2[4], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana2e = 4;
+scat5=1;}
+%}
+
+COMPONENT an25e= Monochromator_flat(
+ 	zmin=-ana_l[2]/2, zmax=ana_l[2]/2, ymin=-AW2/2, ymax=AW2/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an2[5], z_an2[5]) RELATIVE a4e
+  ROTATED (90-thet_an2[5], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana2e = 5;
+scat5=1;}
+%}
+
+COMPONENT an31e= Monochromator_flat(
+ 	zmin=-ana_l[3]/2, zmax=ana_l[3]/2, ymin=-AW3/2, ymax=AW3/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an3[1], z_an3[1]) RELATIVE a4e
+  ROTATED (90-thet_an3[1], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana3e = 1;
+scat5=1;}
+%}
+
+COMPONENT an32e= Monochromator_flat(
+ 	zmin=-ana_l[3]/2, zmax=ana_l[3]/2, ymin=-AW3/2, ymax=AW3/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an3[2], z_an3[2]) RELATIVE a4e
+  ROTATED (90-thet_an3[2], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana3e = 2;
+scat5=1;}
+%}
+
+COMPONENT an33e= Monochromator_flat(
+ 	zmin=-ana_l[3]/2, zmax=ana_l[3]/2, ymin=-AW3/2, ymax=AW3/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an3[3], z_an3[3]) RELATIVE a4e
+  ROTATED (90-thet_an3[3], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana3e = 3;
+scat5=1;}
+%}
+
+COMPONENT an34e= Monochromator_flat(
+ 	zmin=-ana_l[3]/2, zmax=ana_l[3]/2, ymin=-AW3/2, ymax=AW3/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an3[4], z_an3[4]) RELATIVE a4e
+  ROTATED (90-thet_an3[4], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana3e = 4;
+scat5=1;}
+%}
+
+COMPONENT an35e= Monochromator_flat(
+ 	zmin=-ana_l[3]/2, zmax=ana_l[3]/2, ymin=-AW3/2, ymax=AW3/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an3[5], z_an3[5]) RELATIVE a4e
+  ROTATED (90-thet_an3[5], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana3e = 5;
+scat5=1;}
+%}
+
+COMPONENT an41e= Monochromator_flat(
+ 	zmin=-ana_l[4]/2, zmax=ana_l[4]/2, ymin=-AW4/2, ymax=AW4/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an4[1], z_an4[1]) RELATIVE a4e
+  ROTATED (90-thet_an4[1], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana4e = 1;
+scat5=1;}
+%}
+
+COMPONENT an42e= Monochromator_flat(
+ 	zmin=-ana_l[4]/2, zmax=ana_l[4]/2, ymin=-AW4/2, ymax=AW4/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an4[2], z_an4[2]) RELATIVE a4e
+  ROTATED (90-thet_an4[2], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana4e = 2;
+scat5=1;}
+%}
+
+COMPONENT an43e= Monochromator_flat(
+ 	zmin=-ana_l[4]/2, zmax=ana_l[4]/2, ymin=-AW4/2, ymax=AW4/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an4[3], z_an4[3]) RELATIVE a4e
+  ROTATED (90-thet_an4[3], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana4e = 3;
+scat5=1;}
+%}
+
+COMPONENT an44e= Monochromator_flat(
+ 	zmin=-ana_l[4]/2, zmax=ana_l[4]/2, ymin=-AW4/2, ymax=AW4/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an4[4], z_an4[4]) RELATIVE a4e
+  ROTATED (90-thet_an4[4], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana4e = 4;
+scat5=1;}
+%}
+
+COMPONENT an45e= Monochromator_flat(
+ 	zmin=-ana_l[4]/2, zmax=ana_l[4]/2, ymin=-AW4/2, ymax=AW4/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an4[5], z_an4[5]) RELATIVE a4e
+  ROTATED (90-thet_an4[5], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana4e = 5;
+scat5=1;}
+%}
+
+COMPONENT an51e= Monochromator_flat(
+ 	zmin=-ana_l[5]/2, zmax=ana_l[5]/2, ymin=-AW5/2, ymax=AW5/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an5[1], z_an5[1]) RELATIVE a4e
+  ROTATED (90-thet_an5[1], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana5e = 1;
+scat5=1;}
+%}
+
+COMPONENT an52e= Monochromator_flat(
+ 	zmin=-ana_l[5]/2, zmax=ana_l[5]/2, ymin=-AW5/2, ymax=AW5/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an5[2], z_an5[2]) RELATIVE a4e
+  ROTATED (90-thet_an5[2], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana5e = 2;
+scat5=1;}
+%}
+
+COMPONENT an53e= Monochromator_flat(
+ 	zmin=-ana_l[5]/2, zmax=ana_l[5]/2, ymin=-AW5/2, ymax=AW5/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an5[3], z_an5[3]) RELATIVE a4e
+  ROTATED (90-thet_an5[3], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana5e = 3;
+scat5=1;}
+%}
+
+COMPONENT an54e= Monochromator_flat(
+ 	zmin=-ana_l[5]/2, zmax=ana_l[5]/2, ymin=-AW5/2, ymax=AW5/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an5[4], z_an5[4]) RELATIVE a4e
+  ROTATED (90-thet_an5[4], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana5e = 4;
+scat5=1;}
+%}
+
+COMPONENT an55e= Monochromator_flat(
+ 	zmin=-ana_l[5]/2, zmax=ana_l[5]/2, ymin=-AW5/2, ymax=AW5/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an5[5], z_an5[5]) RELATIVE a4e
+  ROTATED (90-thet_an5[5], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana5e = 5;
+scat5=1;}
+%}
+
+COMPONENT an61e= Monochromator_flat(
+ 	zmin=-ana_l[6]/2, zmax=ana_l[6]/2, ymin=-AW6/2, ymax=AW6/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an6[1], z_an6[1]) RELATIVE a4e
+  ROTATED (90-thet_an6[1], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana6e = 1;
+scat5=1;}
+%}
+
+COMPONENT an62e= Monochromator_flat(
+ 	zmin=-ana_l[6]/2, zmax=ana_l[6]/2, ymin=-AW6/2, ymax=AW6/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an6[2], z_an6[2]) RELATIVE a4e
+  ROTATED (90-thet_an6[2], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana6e = 2;
+scat5=1;}
+%}
+
+COMPONENT an63e= Monochromator_flat(
+ 	zmin=-ana_l[6]/2, zmax=ana_l[6]/2, ymin=-AW6/2, ymax=AW6/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an6[3], z_an6[3]) RELATIVE a4e
+  ROTATED (90-thet_an6[3], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana6e = 3;
+scat5=1;}
+%}
+
+COMPONENT an64e= Monochromator_flat(
+ 	zmin=-ana_l[6]/2, zmax=ana_l[6]/2, ymin=-AW6/2, ymax=AW6/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an6[4], z_an6[4]) RELATIVE a4e
+  ROTATED (90-thet_an6[4], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana6e = 4;
+scat5=1;}
+%}
+
+COMPONENT an65e= Monochromator_flat(
+ 	zmin=-ana_l[6]/2, zmax=ana_l[6]/2, ymin=-AW6/2, ymax=AW6/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an6[5], z_an6[5]) RELATIVE a4e
+  ROTATED (90-thet_an6[5], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana6e = 5;
+scat5=1;}
+%}
+
+COMPONENT an71e= Monochromator_flat(
+ 	zmin=-ana_l[7]/2, zmax=ana_l[7]/2, ymin=-AW7/2, ymax=AW7/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an7[1], z_an7[1]) RELATIVE a4e
+  ROTATED (90-thet_an7[1], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana7e = 1;
+scat5=1;}
+%}
+
+COMPONENT an72e= Monochromator_flat(
+ 	zmin=-ana_l[7]/2, zmax=ana_l[7]/2, ymin=-AW7/2, ymax=AW7/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an7[2], z_an7[2]) RELATIVE a4e
+  ROTATED (90-thet_an7[2], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana7e = 2;
+scat5=1;}
+%}
+
+COMPONENT an73e= Monochromator_flat(
+ 	zmin=-ana_l[7]/2, zmax=ana_l[7]/2, ymin=-AW7/2, ymax=AW7/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an7[3], z_an7[3]) RELATIVE a4e
+  ROTATED (90-thet_an7[3], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana7e = 3;
+scat5=1;}
+%}
+
+COMPONENT an74e= Monochromator_flat(
+ 	zmin=-ana_l[7]/2, zmax=ana_l[7]/2, ymin=-AW7/2, ymax=AW7/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an7[4], z_an7[4]) RELATIVE a4e
+  ROTATED (90-thet_an7[4], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana7e = 4;
+scat5=1;}
+%}
+
+COMPONENT an75e= Monochromator_flat(
+ 	zmin=-ana_l[7]/2, zmax=ana_l[7]/2, ymin=-AW7/2, ymax=AW7/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an7[5], z_an7[5]) RELATIVE a4e
+  ROTATED (90-thet_an7[5], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana7e = 5;
+scat5=1;}
+%}
+
+COMPONENT an81e= Monochromator_flat(
+ 	zmin=-ana_l[8]/2, zmax=ana_l[8]/2, ymin=-AW8/2, ymax=AW8/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an8[1], z_an8[1]) RELATIVE a4e
+  ROTATED (90-thet_an8[1], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana8e = 1;
+scat5=1;}
+%}
+
+COMPONENT an82e= Monochromator_flat(
+ 	zmin=-ana_l[8]/2, zmax=ana_l[8]/2, ymin=-AW8/2, ymax=AW8/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an8[2], z_an8[2]) RELATIVE a4e
+  ROTATED (90-thet_an8[2], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana8e = 2;
+scat5=1;}
+%}
+
+COMPONENT an83e= Monochromator_flat(
+ 	zmin=-ana_l[8]/2, zmax=ana_l[8]/2, ymin=-AW8/2, ymax=AW8/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an8[3], z_an8[3]) RELATIVE a4e
+  ROTATED (90-thet_an8[3], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana8e = 3;
+scat5=1;}
+%}
+
+COMPONENT an84e= Monochromator_flat(
+ 	zmin=-ana_l[8]/2, zmax=ana_l[8]/2, ymin=-AW8/2, ymax=AW8/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+   AT (0, y_an8[4], z_an8[4]) RELATIVE a4e
+  ROTATED (90-thet_an8[4], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana8e = 4;
+scat5=1;}
+%}
+
+COMPONENT an85e= Monochromator_flat(
+ 	zmin=-ana_l[8]/2, zmax=ana_l[8]/2, ymin=-AW8/2, ymax=AW8/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an8[5], z_an8[5]) RELATIVE a4e
+  ROTATED (90-thet_an8[5], 90.0, 0) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  if(SCATTERED) {Ana8e = 5;
+scat5=1;}
+%}
+
+COMPONENT a5e = Arm()
+AT (0, 0, z_an8[6]+0.2) RELATIVE a4e
+GROUP Analyzer5
+EXTEND %{
+  SCATTER;
+scat5=0;
+%}
+
+// Entire rack of Detectors
+
+COMPONENT psd_tube1_1e = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_1_5.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat5==1) AT (detx_1[0], dety_1, detz_1[0]) RELATIVE a4e
+  ROTATED (90, 0, ang_1[0]) RELATIVE a4e
+
+COMPONENT psd_tube1_2e = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_2_5.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat5==1) AT (detx_1[1], dety_1, detz_1[1]) RELATIVE a4e
+  ROTATED (90, 0, ang_1[1]) RELATIVE a4e
+
+COMPONENT psd_tube1_3e = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_3_5.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat5==1) AT (detx_1[2], dety_1, detz_1[2]) RELATIVE a4e
+  ROTATED (90, 0, ang_1[2]) RELATIVE a4e
+
+COMPONENT psd_tube1_4e = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_4_5.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat5==1) AT (detx_1[3], dety_1, detz_1[3]) RELATIVE a4e
+  ROTATED (90, 0, ang_1[3]) RELATIVE a4e
+
+COMPONENT psd_tube1_5e = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_5_5.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat5==1) AT (detx_1[4], dety_1, detz_1[4]) RELATIVE a4e
+  ROTATED (90, 0, ang_1[4]) RELATIVE a4e
+
+COMPONENT psd_tube1_6e = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_6_5.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat5==1) AT (detx_1[5], dety_1, detz_1[5]) RELATIVE a4e
+  ROTATED (90, 0, ang_1[5]) RELATIVE a4e
+
+COMPONENT psd_tube1_7e = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_7_5.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat5==1) AT (detx_1[6], dety_1, detz_1[6]) RELATIVE a4e
+  ROTATED (90, 0, ang_1[6]) RELATIVE a4e
+
+COMPONENT psd_tube2_1e = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_1_5.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat5==1) AT (detx_2[0], dety_2, detz_2[0]) RELATIVE a4e
+  ROTATED (90, 0, ang_2[0]) RELATIVE a4e
+
+COMPONENT psd_tube2_2e = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_2_5.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat5==1) AT (detx_2[1], dety_2, detz_2[1]) RELATIVE a4e
+  ROTATED (90, 0, ang_2[1]) RELATIVE a4e
+
+COMPONENT psd_tube2_3e = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_3_5.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat5==1) AT (detx_2[2], dety_2, detz_2[2]) RELATIVE a4e
+  ROTATED (90, 0, ang_2[2]) RELATIVE a4e
+
+COMPONENT psd_tube2_4e = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_4_5.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat5==1) AT (detx_2[3], dety_2, detz_2[3]) RELATIVE a4e
+  ROTATED (90, 0, ang_2[3]) RELATIVE a4e
+
+COMPONENT psd_tube2_5e = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_5_5.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat5==1) AT (detx_2[4], dety_2, detz_2[4]) RELATIVE a4e
+  ROTATED (90, 0, ang_2[4]) RELATIVE a4e
+
+COMPONENT psd_tube2_6e = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_6_5.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat5==1) AT (detx_2[5], dety_2, detz_2[5]) RELATIVE a4e
+  ROTATED (90, 0, ang_2[5]) RELATIVE a4e
+
+********************************************************************************
+
+COMPONENT an11f= Monochromator_flat(
+ 	zmin=-ana_l[1]/2, zmax=ana_l[1]/2, ymin=-AW1/2, ymax=AW1/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an1[1], z_an1[1]) RELATIVE a4f
+  ROTATED (90-thet_an1[1], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana1f = 1;
+scat6=1;}
+%}
+
+COMPONENT an12f= Monochromator_flat(
+ 	zmin=-ana_l[1]/2, zmax=ana_l[1]/2, ymin=-AW1/2, ymax=AW1/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an1[2], z_an1[2]) RELATIVE a4f
+  ROTATED (90-thet_an1[2], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana1f = 2;
+scat6=1;}
+%}
+
+COMPONENT an13f= Monochromator_flat(
+ 	zmin=-ana_l[1]/2, zmax=ana_l[1]/2, ymin=-AW1/2, ymax=AW1/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an1[3], z_an1[3]) RELATIVE a4f
+  ROTATED (90-thet_an1[3], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana1f = 3;
+scat6=1;}
+%}
+
+COMPONENT an14f= Monochromator_flat(
+ 	zmin=-ana_l[1]/2, zmax=ana_l[1]/2, ymin=-AW1/2, ymax=AW1/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an1[4], z_an1[4]) RELATIVE a4f
+  ROTATED (90-thet_an1[4], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana1f = 4;
+scat6=1;}
+%}
+
+COMPONENT an15f= Monochromator_flat(
+ 	zmin=-ana_l[1]/2, zmax=ana_l[1]/2, ymin=-AW1/2, ymax=AW1/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an1[5], z_an1[5]) RELATIVE a4f
+  ROTATED (90-thet_an1[5], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana1f = 5;
+scat6=1;}
+%}
+
+COMPONENT an21f= Monochromator_flat(
+ 	zmin=-ana_l[2]/2, zmax=ana_l[2]/2, ymin=-AW2/2, ymax=AW2/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an2[1], z_an2[1]) RELATIVE a4f
+  ROTATED (90-thet_an2[1], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana2f = 1;
+scat6=1;}
+%}
+
+COMPONENT an22f= Monochromator_flat(
+ 	zmin=-ana_l[2]/2, zmax=ana_l[2]/2, ymin=-AW2/2, ymax=AW2/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an2[2], z_an2[2]) RELATIVE a4f
+  ROTATED (90-thet_an2[2], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana2f = 2;
+scat6=1;}
+%}
+
+COMPONENT an23f= Monochromator_flat(
+ 	zmin=-ana_l[2]/2, zmax=ana_l[2]/2, ymin=-AW2/2, ymax=AW2/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an2[3], z_an2[3]) RELATIVE a4f
+  ROTATED (90-thet_an2[3], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana2f = 3;
+scat6=1;}
+%}
+
+COMPONENT an24f= Monochromator_flat(
+ 	zmin=-ana_l[2]/2, zmax=ana_l[2]/2, ymin=-AW2/2, ymax=AW2/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an2[4], z_an2[4]) RELATIVE a4f
+  ROTATED (90-thet_an2[4], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana2f = 4;
+scat6=1;}
+%}
+
+COMPONENT an25f= Monochromator_flat(
+ 	zmin=-ana_l[2]/2, zmax=ana_l[2]/2, ymin=-AW2/2, ymax=AW2/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an2[5], z_an2[5]) RELATIVE a4f
+  ROTATED (90-thet_an2[5], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana2f = 5;
+scat6=1;}
+%}
+
+COMPONENT an31f= Monochromator_flat(
+ 	zmin=-ana_l[3]/2, zmax=ana_l[3]/2, ymin=-AW3/2, ymax=AW3/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an3[1], z_an3[1]) RELATIVE a4f
+  ROTATED (90-thet_an3[1], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana3f = 1;
+scat6=1;}
+%}
+
+COMPONENT an32f= Monochromator_flat(
+ 	zmin=-ana_l[3]/2, zmax=ana_l[3]/2, ymin=-AW3/2, ymax=AW3/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an3[2], z_an3[2]) RELATIVE a4f
+  ROTATED (90-thet_an3[2], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana3f = 2;
+scat6=1;}
+%}
+
+COMPONENT an33f= Monochromator_flat(
+ 	zmin=-ana_l[3]/2, zmax=ana_l[3]/2, ymin=-AW3/2, ymax=AW3/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an3[3], z_an3[3]) RELATIVE a4f
+  ROTATED (90-thet_an3[3], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana3f = 3;
+scat6=1;}
+%}
+
+COMPONENT an34f= Monochromator_flat(
+ 	zmin=-ana_l[3]/2, zmax=ana_l[3]/2, ymin=-AW3/2, ymax=AW3/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an3[4], z_an3[4]) RELATIVE a4f
+  ROTATED (90-thet_an3[4], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana3f = 4;
+scat6=1;}
+%}
+
+COMPONENT an35f= Monochromator_flat(
+ 	zmin=-ana_l[3]/2, zmax=ana_l[3]/2, ymin=-AW3/2, ymax=AW3/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an3[5], z_an3[5]) RELATIVE a4f
+  ROTATED (90-thet_an3[5], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana3f = 5;
+scat6=1;}
+%}
+
+COMPONENT an41f= Monochromator_flat(
+ 	zmin=-ana_l[4]/2, zmax=ana_l[4]/2, ymin=-AW4/2, ymax=AW4/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an4[1], z_an4[1]) RELATIVE a4f
+  ROTATED (90-thet_an4[1], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana4f = 1;
+scat6=1;}
+%}
+
+COMPONENT an42f= Monochromator_flat(
+ 	zmin=-ana_l[4]/2, zmax=ana_l[4]/2, ymin=-AW4/2, ymax=AW4/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an4[2], z_an4[2]) RELATIVE a4f
+  ROTATED (90-thet_an4[2], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana4f = 2;
+scat6=1;}
+%}
+
+COMPONENT an43f= Monochromator_flat(
+ 	zmin=-ana_l[4]/2, zmax=ana_l[4]/2, ymin=-AW4/2, ymax=AW4/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an4[3], z_an4[3]) RELATIVE a4f
+  ROTATED (90-thet_an4[3], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana4f = 3;
+scat6=1;}
+%}
+
+COMPONENT an44f= Monochromator_flat(
+ 	zmin=-ana_l[4]/2, zmax=ana_l[4]/2, ymin=-AW4/2, ymax=AW4/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an4[4], z_an4[4]) RELATIVE a4f
+  ROTATED (90-thet_an4[4], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana4f = 4;
+scat6=1;}
+%}
+
+COMPONENT an45f= Monochromator_flat(
+ 	zmin=-ana_l[4]/2, zmax=ana_l[4]/2, ymin=-AW4/2, ymax=AW4/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an4[5], z_an4[5]) RELATIVE a4f
+  ROTATED (90-thet_an4[5], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana4f = 5;
+scat6=1;}
+%}
+
+COMPONENT an51f= Monochromator_flat(
+ 	zmin=-ana_l[5]/2, zmax=ana_l[5]/2, ymin=-AW5/2, ymax=AW5/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an5[1], z_an5[1]) RELATIVE a4f
+  ROTATED (90-thet_an5[1], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana5f = 1;
+scat6=1;}
+%}
+
+COMPONENT an52f= Monochromator_flat(
+ 	zmin=-ana_l[5]/2, zmax=ana_l[5]/2, ymin=-AW5/2, ymax=AW5/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an5[2], z_an5[2]) RELATIVE a4f
+  ROTATED (90-thet_an5[2], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana5f = 2;
+scat6=1;}
+%}
+
+COMPONENT an53f= Monochromator_flat(
+ 	zmin=-ana_l[5]/2, zmax=ana_l[5]/2, ymin=-AW5/2, ymax=AW5/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an5[3], z_an5[3]) RELATIVE a4f
+  ROTATED (90-thet_an5[3], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana5f = 3;
+scat6=1;}
+%}
+
+COMPONENT an54f= Monochromator_flat(
+ 	zmin=-ana_l[5]/2, zmax=ana_l[5]/2, ymin=-AW5/2, ymax=AW5/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an5[4], z_an5[4]) RELATIVE a4f
+  ROTATED (90-thet_an5[4], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana5f = 4;
+scat6=1;}
+%}
+
+COMPONENT an55f= Monochromator_flat(
+ 	zmin=-ana_l[5]/2, zmax=ana_l[5]/2, ymin=-AW5/2, ymax=AW5/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an5[5], z_an5[5]) RELATIVE a4f
+  ROTATED (90-thet_an5[5], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana5f = 5;
+scat6=1;}
+%}
+
+COMPONENT an61f= Monochromator_flat(
+ 	zmin=-ana_l[6]/2, zmax=ana_l[6]/2, ymin=-AW6/2, ymax=AW6/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an6[1], z_an6[1]) RELATIVE a4f
+  ROTATED (90-thet_an6[1], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana6f = 1;
+scat6=1;}
+%}
+
+COMPONENT an62f= Monochromator_flat(
+ 	zmin=-ana_l[6]/2, zmax=ana_l[6]/2, ymin=-AW6/2, ymax=AW6/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an6[2], z_an6[2]) RELATIVE a4f
+  ROTATED (90-thet_an6[2], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana6f = 2;
+scat6=1;}
+%}
+
+COMPONENT an63f= Monochromator_flat(
+ 	zmin=-ana_l[6]/2, zmax=ana_l[6]/2, ymin=-AW6/2, ymax=AW6/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an6[3], z_an6[3]) RELATIVE a4f
+  ROTATED (90-thet_an6[3], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana6f = 3;
+scat6=1;}
+%}
+
+COMPONENT an64f= Monochromator_flat(
+ 	zmin=-ana_l[6]/2, zmax=ana_l[6]/2, ymin=-AW6/2, ymax=AW6/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an6[4], z_an6[4]) RELATIVE a4f
+  ROTATED (90-thet_an6[4], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana6f = 4;
+scat6=1;}
+%}
+
+COMPONENT an65f= Monochromator_flat(
+ 	zmin=-ana_l[6]/2, zmax=ana_l[6]/2, ymin=-AW6/2, ymax=AW6/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an6[5], z_an6[5]) RELATIVE a4f
+  ROTATED (90-thet_an6[5], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana6f = 5;
+scat6=1;}
+%}
+
+COMPONENT an71f= Monochromator_flat(
+ 	zmin=-ana_l[7]/2, zmax=ana_l[7]/2, ymin=-AW7/2, ymax=AW7/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an7[1], z_an7[1]) RELATIVE a4f
+  ROTATED (90-thet_an7[1], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana7f = 1;
+scat6=1;}
+%}
+
+COMPONENT an72f= Monochromator_flat(
+ 	zmin=-ana_l[7]/2, zmax=ana_l[7]/2, ymin=-AW7/2, ymax=AW7/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an7[2], z_an7[2]) RELATIVE a4f
+  ROTATED (90-thet_an7[2], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana7f = 2;
+scat6=1;}
+%}
+
+COMPONENT an73f= Monochromator_flat(
+ 	zmin=-ana_l[7]/2, zmax=ana_l[7]/2, ymin=-AW7/2, ymax=AW7/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an7[3], z_an7[3]) RELATIVE a4f
+  ROTATED (90-thet_an7[3], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana7f = 3;
+scat6=1;}
+%}
+
+COMPONENT an74f= Monochromator_flat(
+ 	zmin=-ana_l[7]/2, zmax=ana_l[7]/2, ymin=-AW7/2, ymax=AW7/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an7[4], z_an7[4]) RELATIVE a4f
+  ROTATED (90-thet_an7[4], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana7f = 4;
+scat6=1;}
+%}
+
+COMPONENT an75f= Monochromator_flat(
+ 	zmin=-ana_l[7]/2, zmax=ana_l[7]/2, ymin=-AW7/2, ymax=AW7/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an7[5], z_an7[5]) RELATIVE a4f
+  ROTATED (90-thet_an7[5], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana7f = 5;
+scat6=1;}
+%}
+
+COMPONENT an81f= Monochromator_flat(
+ 	zmin=-ana_l[8]/2, zmax=ana_l[8]/2, ymin=-AW8/2, ymax=AW8/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an8[1], z_an8[1]) RELATIVE a4f
+  ROTATED (90-thet_an8[1], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana8f = 1;
+scat6=1;}
+%}
+
+COMPONENT an82f= Monochromator_flat(
+ 	zmin=-ana_l[8]/2, zmax=ana_l[8]/2, ymin=-AW8/2, ymax=AW8/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an8[2], z_an8[2]) RELATIVE a4f
+  ROTATED (90-thet_an8[2], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana8f = 2;
+scat6=1;}
+%}
+
+COMPONENT an83f= Monochromator_flat(
+ 	zmin=-ana_l[8]/2, zmax=ana_l[8]/2, ymin=-AW8/2, ymax=AW8/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an8[3], z_an8[3]) RELATIVE a4f
+  ROTATED (90-thet_an8[3], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana8f = 3;
+scat6=1;}
+%}
+
+COMPONENT an84f= Monochromator_flat(
+ 	zmin=-ana_l[8]/2, zmax=ana_l[8]/2, ymin=-AW8/2, ymax=AW8/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+   AT (0, y_an8[4], z_an8[4]) RELATIVE a4f
+  ROTATED (90-thet_an8[4], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana8f = 4;
+scat6=1;}
+%}
+
+COMPONENT an85f= Monochromator_flat(
+ 	zmin=-ana_l[8]/2, zmax=ana_l[8]/2, ymin=-AW8/2, ymax=AW8/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an8[5], z_an8[5]) RELATIVE a4f
+  ROTATED (90-thet_an8[5], 90.0, 0) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  if(SCATTERED) {Ana8f = 5;
+scat6=1;}
+%}
+
+COMPONENT a5f = Arm()
+AT (0, 0, z_an8[6]+0.2) RELATIVE a4f
+GROUP Analyzer6
+EXTEND %{
+  SCATTER;
+scat6=0;
+%}
+
+// Entire rack of Detectors
+
+COMPONENT psd_tube1_1f = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_1_6.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat6==1) AT (detx_1[0], dety_1, detz_1[0]) RELATIVE a4f
+  ROTATED (90, 0, ang_1[0]) RELATIVE a4f
+
+COMPONENT psd_tube1_2f = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_2_6.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat6==1) AT (detx_1[1], dety_1, detz_1[1]) RELATIVE a4f
+  ROTATED (90, 0, ang_1[1]) RELATIVE a4f
+
+COMPONENT psd_tube1_3f = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_3_6.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat6==1) AT (detx_1[2], dety_1, detz_1[2]) RELATIVE a4f
+  ROTATED (90, 0, ang_1[2]) RELATIVE a4f
+
+COMPONENT psd_tube1_4f = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_4_6.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat6==1) AT (detx_1[3], dety_1, detz_1[3]) RELATIVE a4f
+  ROTATED (90, 0, ang_1[3]) RELATIVE a4f
+
+COMPONENT psd_tube1_5f = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_5_6.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat6==1) AT (detx_1[4], dety_1, detz_1[4]) RELATIVE a4f
+  ROTATED (90, 0, ang_1[4]) RELATIVE a4f
+
+COMPONENT psd_tube1_6f = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_6_6.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat6==1) AT (detx_1[5], dety_1, detz_1[5]) RELATIVE a4f
+  ROTATED (90, 0, ang_1[5]) RELATIVE a4f
+
+COMPONENT psd_tube1_7f = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_7_6.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat6==1) AT (detx_1[6], dety_1, detz_1[6]) RELATIVE a4f
+  ROTATED (90, 0, ang_1[6]) RELATIVE a4f
+
+COMPONENT psd_tube2_1f = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_1_6.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat6==1) AT (detx_2[0], dety_2, detz_2[0]) RELATIVE a4f
+  ROTATED (90, 0, ang_2[0]) RELATIVE a4f
+
+COMPONENT psd_tube2_2f = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_2_6.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat6==1) AT (detx_2[1], dety_2, detz_2[1]) RELATIVE a4f
+  ROTATED (90, 0, ang_2[1]) RELATIVE a4f
+
+COMPONENT psd_tube2_3f = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_3_6.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat6==1) AT (detx_2[2], dety_2, detz_2[2]) RELATIVE a4f
+  ROTATED (90, 0, ang_2[2]) RELATIVE a4f
+
+COMPONENT psd_tube2_4f = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_4_6.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat6==1) AT (detx_2[3], dety_2, detz_2[3]) RELATIVE a4f
+  ROTATED (90, 0, ang_2[3]) RELATIVE a4f
+
+COMPONENT psd_tube2_5f = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_5_6.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat6==1) AT (detx_2[4], dety_2, detz_2[4]) RELATIVE a4f
+  ROTATED (90, 0, ang_2[4]) RELATIVE a4f
+
+COMPONENT psd_tube2_6f = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_6_6.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat6==1) AT (detx_2[5], dety_2, detz_2[5]) RELATIVE a4f
+  ROTATED (90, 0, ang_2[5]) RELATIVE a4f
+
+/********************************************************************************
+
+COMPONENT an11g= Monochromator_flat(
+ 	zmin=-ana_l[1]/2, zmax=ana_l[1]/2, ymin=-AW1/2, ymax=AW1/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an1[1], z_an1[1]) RELATIVE a4g
+  ROTATED (90-thet_an1[1], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana1g = 1;
+scat7=1;}
+%}
+
+COMPONENT an12g= Monochromator_flat(
+ 	zmin=-ana_l[1]/2, zmax=ana_l[1]/2, ymin=-AW1/2, ymax=AW1/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an1[2], z_an1[2]) RELATIVE a4g
+  ROTATED (90-thet_an1[2], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana1g = 2;
+scat7=1;}
+%}
+
+COMPONENT an13g= Monochromator_flat(
+ 	zmin=-ana_l[1]/2, zmax=ana_l[1]/2, ymin=-AW1/2, ymax=AW1/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an1[3], z_an1[3]) RELATIVE a4g
+  ROTATED (90-thet_an1[3], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana1g = 3;
+scat7=1;}
+%}
+
+COMPONENT an14g= Monochromator_flat(
+ 	zmin=-ana_l[1]/2, zmax=ana_l[1]/2, ymin=-AW1/2, ymax=AW1/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an1[4], z_an1[4]) RELATIVE a4g
+  ROTATED (90-thet_an1[4], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana1g = 4;
+scat7=1;}
+%}
+
+COMPONENT an15g= Monochromator_flat(
+ 	zmin=-ana_l[1]/2, zmax=ana_l[1]/2, ymin=-AW1/2, ymax=AW1/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an1[5], z_an1[5]) RELATIVE a4g
+  ROTATED (90-thet_an1[5], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana1g = 5;
+scat7=1;}
+%}
+
+COMPONENT an21g= Monochromator_flat(
+ 	zmin=-ana_l[2]/2, zmax=ana_l[2]/2, ymin=-AW2/2, ymax=AW2/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an2[1], z_an2[1]) RELATIVE a4g
+  ROTATED (90-thet_an2[1], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana2g = 1;
+scat7=1;}
+%}
+
+COMPONENT an22g= Monochromator_flat(
+ 	zmin=-ana_l[2]/2, zmax=ana_l[2]/2, ymin=-AW2/2, ymax=AW2/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an2[2], z_an2[2]) RELATIVE a4g
+  ROTATED (90-thet_an2[2], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana2g = 2;
+scat7=1;}
+%}
+
+COMPONENT an23g= Monochromator_flat(
+ 	zmin=-ana_l[2]/2, zmax=ana_l[2]/2, ymin=-AW2/2, ymax=AW2/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an2[3], z_an2[3]) RELATIVE a4g
+  ROTATED (90-thet_an2[3], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana2g = 3;
+scat7=1;}
+%}
+
+COMPONENT an24g= Monochromator_flat(
+ 	zmin=-ana_l[2]/2, zmax=ana_l[2]/2, ymin=-AW2/2, ymax=AW2/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an2[4], z_an2[4]) RELATIVE a4g
+  ROTATED (90-thet_an2[4], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana2g = 4;
+scat7=1;}
+%}
+
+COMPONENT an25g= Monochromator_flat(
+ 	zmin=-ana_l[2]/2, zmax=ana_l[2]/2, ymin=-AW2/2, ymax=AW2/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an2[5], z_an2[5]) RELATIVE a4g
+  ROTATED (90-thet_an2[5], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana2g = 5;
+scat7=1;}
+%}
+
+COMPONENT an31g= Monochromator_flat(
+ 	zmin=-ana_l[3]/2, zmax=ana_l[3]/2, ymin=-AW3/2, ymax=AW3/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an3[1], z_an3[1]) RELATIVE a4g
+  ROTATED (90-thet_an3[1], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana3g = 1;
+scat7=1;}
+%}
+
+COMPONENT an32g= Monochromator_flat(
+ 	zmin=-ana_l[3]/2, zmax=ana_l[3]/2, ymin=-AW3/2, ymax=AW3/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an3[2], z_an3[2]) RELATIVE a4g
+  ROTATED (90-thet_an3[2], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana3g = 2;
+scat7=1;}
+%}
+
+COMPONENT an33g= Monochromator_flat(
+ 	zmin=-ana_l[3]/2, zmax=ana_l[3]/2, ymin=-AW3/2, ymax=AW3/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an3[3], z_an3[3]) RELATIVE a4g
+  ROTATED (90-thet_an3[3], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana3g = 3;
+scat7=1;}
+%}
+
+COMPONENT an34g= Monochromator_flat(
+ 	zmin=-ana_l[3]/2, zmax=ana_l[3]/2, ymin=-AW3/2, ymax=AW3/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an3[4], z_an3[4]) RELATIVE a4g
+  ROTATED (90-thet_an3[4], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana3g = 4;
+scat7=1;}
+%}
+
+COMPONENT an35g= Monochromator_flat(
+ 	zmin=-ana_l[3]/2, zmax=ana_l[3]/2, ymin=-AW3/2, ymax=AW3/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an3[5], z_an3[5]) RELATIVE a4g
+  ROTATED (90-thet_an3[5], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana3g = 5;
+scat7=1;}
+%}
+
+COMPONENT an41g= Monochromator_flat(
+ 	zmin=-ana_l[4]/2, zmax=ana_l[4]/2, ymin=-AW4/2, ymax=AW4/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an4[1], z_an4[1]) RELATIVE a4g
+  ROTATED (90-thet_an4[1], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana4g = 1;
+scat7=1;}
+%}
+
+COMPONENT an42g= Monochromator_flat(
+ 	zmin=-ana_l[4]/2, zmax=ana_l[4]/2, ymin=-AW4/2, ymax=AW4/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an4[2], z_an4[2]) RELATIVE a4g
+  ROTATED (90-thet_an4[2], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana4g = 2;
+scat7=1;}
+%}
+
+COMPONENT an43g= Monochromator_flat(
+ 	zmin=-ana_l[4]/2, zmax=ana_l[4]/2, ymin=-AW4/2, ymax=AW4/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an4[3], z_an4[3]) RELATIVE a4g
+  ROTATED (90-thet_an4[3], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana4g = 3;
+scat7=1;}
+%}
+
+COMPONENT an44g= Monochromator_flat(
+ 	zmin=-ana_l[4]/2, zmax=ana_l[4]/2, ymin=-AW4/2, ymax=AW4/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an4[4], z_an4[4]) RELATIVE a4g
+  ROTATED (90-thet_an4[4], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana4g = 4;
+scat7=1;}
+%}
+
+COMPONENT an45g= Monochromator_flat(
+ 	zmin=-ana_l[4]/2, zmax=ana_l[4]/2, ymin=-AW4/2, ymax=AW4/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an4[5], z_an4[5]) RELATIVE a4g
+  ROTATED (90-thet_an4[5], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana4g = 5;
+scat7=1;}
+%}
+
+COMPONENT an51g= Monochromator_flat(
+ 	zmin=-ana_l[5]/2, zmax=ana_l[5]/2, ymin=-AW5/2, ymax=AW5/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an5[1], z_an5[1]) RELATIVE a4g
+  ROTATED (90-thet_an5[1], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana5g = 1;
+scat7=1;}
+%}
+
+COMPONENT an52g= Monochromator_flat(
+ 	zmin=-ana_l[5]/2, zmax=ana_l[5]/2, ymin=-AW5/2, ymax=AW5/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an5[2], z_an5[2]) RELATIVE a4g
+  ROTATED (90-thet_an5[2], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana5g = 2;
+scat7=1;}
+%}
+
+COMPONENT an53g= Monochromator_flat(
+ 	zmin=-ana_l[5]/2, zmax=ana_l[5]/2, ymin=-AW5/2, ymax=AW5/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an5[3], z_an5[3]) RELATIVE a4g
+  ROTATED (90-thet_an5[3], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana5g = 3;
+scat7=1;}
+%}
+
+COMPONENT an54g= Monochromator_flat(
+ 	zmin=-ana_l[5]/2, zmax=ana_l[5]/2, ymin=-AW5/2, ymax=AW5/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an5[4], z_an5[4]) RELATIVE a4g
+  ROTATED (90-thet_an5[4], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana5g = 4;
+scat7=1;}
+%}
+
+COMPONENT an55g= Monochromator_flat(
+ 	zmin=-ana_l[5]/2, zmax=ana_l[5]/2, ymin=-AW5/2, ymax=AW5/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an5[5], z_an5[5]) RELATIVE a4g
+  ROTATED (90-thet_an5[5], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana5g = 5;
+scat7=1;}
+%}
+
+COMPONENT an61g= Monochromator_flat(
+ 	zmin=-ana_l[6]/2, zmax=ana_l[6]/2, ymin=-AW6/2, ymax=AW6/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an6[1], z_an6[1]) RELATIVE a4g
+  ROTATED (90-thet_an6[1], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana6g = 1;
+scat7=1;}
+%}
+
+COMPONENT an62g= Monochromator_flat(
+ 	zmin=-ana_l[6]/2, zmax=ana_l[6]/2, ymin=-AW6/2, ymax=AW6/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an6[2], z_an6[2]) RELATIVE a4g
+  ROTATED (90-thet_an6[2], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana6g = 2;
+scat7=1;}
+%}
+
+COMPONENT an63g= Monochromator_flat(
+ 	zmin=-ana_l[6]/2, zmax=ana_l[6]/2, ymin=-AW6/2, ymax=AW6/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an6[3], z_an6[3]) RELATIVE a4g
+  ROTATED (90-thet_an6[3], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana6g = 3;
+scat7=1;}
+%}
+
+COMPONENT an64g= Monochromator_flat(
+ 	zmin=-ana_l[6]/2, zmax=ana_l[6]/2, ymin=-AW6/2, ymax=AW6/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an6[4], z_an6[4]) RELATIVE a4g
+  ROTATED (90-thet_an6[4], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana6g = 4;
+scat7=1;}
+%}
+
+COMPONENT an65g= Monochromator_flat(
+ 	zmin=-ana_l[6]/2, zmax=ana_l[6]/2, ymin=-AW6/2, ymax=AW6/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an6[5], z_an6[5]) RELATIVE a4g
+  ROTATED (90-thet_an6[5], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana6g = 5;
+scat7=1;}
+%}
+
+COMPONENT an71g= Monochromator_flat(
+ 	zmin=-ana_l[7]/2, zmax=ana_l[7]/2, ymin=-AW7/2, ymax=AW7/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an7[1], z_an7[1]) RELATIVE a4g
+  ROTATED (90-thet_an7[1], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana7g = 1;
+scat7=1;}
+%}
+
+COMPONENT an72g= Monochromator_flat(
+ 	zmin=-ana_l[7]/2, zmax=ana_l[7]/2, ymin=-AW7/2, ymax=AW7/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an7[2], z_an7[2]) RELATIVE a4g
+  ROTATED (90-thet_an7[2], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana7g = 2;
+scat7=1;}
+%}
+
+COMPONENT an73g= Monochromator_flat(
+ 	zmin=-ana_l[7]/2, zmax=ana_l[7]/2, ymin=-AW7/2, ymax=AW7/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an7[3], z_an7[3]) RELATIVE a4g
+  ROTATED (90-thet_an7[3], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana7g = 3;
+scat7=1;}
+%}
+
+COMPONENT an74g= Monochromator_flat(
+ 	zmin=-ana_l[7]/2, zmax=ana_l[7]/2, ymin=-AW7/2, ymax=AW7/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an7[4], z_an7[4]) RELATIVE a4g
+  ROTATED (90-thet_an7[4], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana7g = 4;
+scat7=1;}
+%}
+
+COMPONENT an75g= Monochromator_flat(
+ 	zmin=-ana_l[7]/2, zmax=ana_l[7]/2, ymin=-AW7/2, ymax=AW7/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an7[5], z_an7[5]) RELATIVE a4g
+  ROTATED (90-thet_an7[5], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana7g = 5;
+scat7=1;}
+%}
+
+COMPONENT an81g= Monochromator_flat(
+ 	zmin=-ana_l[8]/2, zmax=ana_l[8]/2, ymin=-AW8/2, ymax=AW8/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an8[1], z_an8[1]) RELATIVE a4g
+  ROTATED (90-thet_an8[1], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana8g = 1;
+scat7=1;}
+%}
+
+COMPONENT an82g= Monochromator_flat(
+ 	zmin=-ana_l[8]/2, zmax=ana_l[8]/2, ymin=-AW8/2, ymax=AW8/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an8[2], z_an8[2]) RELATIVE a4g
+  ROTATED (90-thet_an8[2], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana8g = 2;
+scat7=1;}
+%}
+
+COMPONENT an83g= Monochromator_flat(
+ 	zmin=-ana_l[8]/2, zmax=ana_l[8]/2, ymin=-AW8/2, ymax=AW8/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an8[3], z_an8[3]) RELATIVE a4g
+  ROTATED (90-thet_an8[3], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana8g = 3;
+scat7=1;}
+%}
+
+COMPONENT an84g= Monochromator_flat(
+ 	zmin=-ana_l[8]/2, zmax=ana_l[8]/2, ymin=-AW8/2, ymax=AW8/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+   AT (0, y_an8[4], z_an8[4]) RELATIVE a4g
+  ROTATED (90-thet_an8[4], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana8g = 4;
+scat7=1;}
+%}
+
+COMPONENT an85g= Monochromator_flat(
+ 	zmin=-ana_l[8]/2, zmax=ana_l[8]/2, ymin=-AW8/2, ymax=AW8/2,
+   	mosaich=60, mosaicv=60,
+ 	r0=ana_r0, Q=ana_q)
+  AT (0, y_an8[5], z_an8[5]) RELATIVE a4g
+  ROTATED (90-thet_an8[5], 90.0, 0) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  if(SCATTERED) {Ana8g = 5;
+scat7=1;}
+%}
+
+COMPONENT a5g = Arm()
+AT (0, 0, z_an8[6]+0.2) RELATIVE a4g
+GROUP Analyzer7
+EXTEND %{
+  SCATTER;
+scat7=0;
+%}
+
+// Entire rack of Detectors
+
+COMPONENT psd_tube1_1g = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_1_7.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat7==1) AT (detx_1[0], dety_1, detz_1[0]) RELATIVE a4g
+  ROTATED (90, 0, ang_1[0]) RELATIVE a4g
+
+COMPONENT psd_tube1_2g = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_2_7.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat7==1) AT (detx_1[1], dety_1, detz_1[1]) RELATIVE a4g
+  ROTATED (90, 0, ang_1[1]) RELATIVE a4g
+
+COMPONENT psd_tube1_3g = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_3_7.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat7==1) AT (detx_1[2], dety_1, detz_1[2]) RELATIVE a4g
+  ROTATED (90, 0, ang_1[2]) RELATIVE a4g
+
+COMPONENT psd_tube1_4g = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_4_7.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat7==1) AT (detx_1[3], dety_1, detz_1[3]) RELATIVE a4g
+  ROTATED (90, 0, ang_1[3]) RELATIVE a4g
+
+COMPONENT psd_tube1_5g = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_5_7.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat7==1) AT (detx_1[4], dety_1, detz_1[4]) RELATIVE a4g
+  ROTATED (90, 0, ang_1[4]) RELATIVE a4g
+
+COMPONENT psd_tube1_6g = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_6_7.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat7==1) AT (detx_1[5], dety_1, detz_1[5]) RELATIVE a4g
+  ROTATED (90, 0, ang_1[5]) RELATIVE a4g
+
+COMPONENT psd_tube1_7g = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes1_7_7.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat7==1) AT (detx_1[6], dety_1, detz_1[6]) RELATIVE a4g
+  ROTATED (90, 0, ang_1[6]) RELATIVE a4g
+
+COMPONENT psd_tube2_1g = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_1_7.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat7==1) AT (detx_2[0], dety_2, detz_2[0]) RELATIVE a4g
+  ROTATED (90, 0, ang_2[0]) RELATIVE a4g
+
+COMPONENT psd_tube2_2g = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_2_7.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat7==1) AT (detx_2[1], dety_2, detz_2[1]) RELATIVE a4g
+  ROTATED (90, 0, ang_2[1]) RELATIVE a4g
+
+COMPONENT psd_tube2_3g = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_3_7.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat7==1) AT (detx_2[2], dety_2, detz_2[2]) RELATIVE a4g
+  ROTATED (90, 0, ang_2[2]) RELATIVE a4g
+
+COMPONENT psd_tube2_4g = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_4_7.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat7==1) AT (detx_2[3], dety_2, detz_2[3]) RELATIVE a4g
+  ROTATED (90, 0, ang_2[3]) RELATIVE a4g
+
+COMPONENT psd_tube2_5g = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_5_7.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat7==1) AT (detx_2[4], dety_2, detz_2[4]) RELATIVE a4g
+  ROTATED (90, 0, ang_2[4]) RELATIVE a4g
+
+COMPONENT psd_tube2_6g = PSD_Detector(
+    nx = 1, ny = 128, filename = "ReuterStokes2_6_7.psd",
+    FN_Conv = "He3inHe.table", FN_Stop = "He3inCO2.table",
+    radius = DET_rad, yheight = DET_len, threshold = 100,
+    PressureConv = 7, PressureStop = 0.1, borderx = -1,
+    xChDivRelSigma = 0, yChDivRelSigma = 0.006, type="events")
+  WHEN (scat7==1) AT (detx_2[5], dety_2, detz_2[5]) RELATIVE a4g
+  ROTATED (90, 0, ang_2[5]) RELATIVE a4g
+
+***************/
+
+END
